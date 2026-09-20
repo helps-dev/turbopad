@@ -102,3 +102,70 @@ header{background:#0d0d0cee;border-color:#302a24}.page-title h1{color:#f4f0e9}.p
 .banner-features{background:#1b1814ef;border-color:#4a3d31;box-shadow:0 4px 0 #2e271f}.banner-features>.eyebrow{color:#e0ba84}.banner-feature-grid button{background:#1d1a16;border-color:#3b3229;color:#e1d7ca}.banner-feature-grid b{color:#d9af79}.banner-feature-grid button:hover{border-color:#a27c52}.banner-features>.lime{box-shadow:0 3px 0 #6a4e34}.banner-features>.lime:hover{box-shadow:0 6px 0 #6a4e34}.banner-features>.lime:active{box-shadow:0 2px 0 #6a4e34}.banner-viewport{background:#100f0d;border-color:#534231;box-shadow:0 4px 0 #2d251d}.banner-market-art{background:radial-gradient(ellipse at 100% 0%,#d0a36e3c,transparent 68%),linear-gradient(115deg,#2a2119,#15120f)}.slide-tag{background:#16120ee8;border-color:#96714d55;color:#ecd3b2}.slide-gain{color:#e7c798}.banner-market-info small{color:#a68d75}.banner-market-info button{background:#2a2118;border-color:#6b5137;color:#ecd2ad}.banner-curve span{color:#a89179}.banner-curve>i{background:#413323}.banner-curve b{background:#d9af79}.banner-curve strong{color:#d8bd9c}
 .overview{background:linear-gradient(125deg,#191714,#11100e);border-color:#44382d}.overview-insight{border-color:#3c3128;background:#ffffff01}.overview-bottom{border-color:#3a3027;background:#0e0d0b55}.overview-bottom>div{border-color:#3a3027}.overview-top .eyebrow,.overview-heading p,.chart-tools>span,.chart-axis{color:#a99a8b}.sample-tag{color:#8f7e6e}.spotlight-avatar{background:#d9af79;color:#24180f}.overview-heading h2 span{color:#b3a290}.overview-price>span{color:#e0bd89}.chart-tools button.selected{background:#3a2f22;color:#ecd4b0}.score-orbit circle{stroke:#3b3027}.score-orbit .score-arc{stroke:#d9af79}.score-orbit strong{color:#f3eee5}.score-orbit span,.insight-note{color:#a6937e}.insight-status{color:#d9b986}.strength{color:#aa9a89}.strength b{color:#ded2c4}.strength i{background:linear-gradient(to right,#c7a170 var(--strength),#362c23 var(--strength))}.inline-progress{background:linear-gradient(to right,#d0a572 84%,#3b3026 84%)}
 .market-card{background:linear-gradient(140deg,#201c18,#161412);border-color:#40362d}.market-card:hover,.market-card.motion-enter:hover{border-color:#806344;box-shadow:inset 0 1px #ffffff0b,0 8px 20px #0004}.card-metrics{border-color:#372e27}.card-metrics span,.progress-caption,.source-tag{color:#a99a8b}.progress{background:#382f28}.progress i{background:#d0aa79}.radar-panel,.battle-panel,.studio-panel{background:linear-gradient(140deg,#1c1915,#141210);border-color:#40352b}.radar-panel .muted,.battle-panel .muted{color:#aa9b8b}.signal-row{color:#ae9f90}.signal-row b{color:#e1bd8b}.signal-row strong{color:#eee4d7}.pill,.violet{background:#302820;color:#d5c0a6}.lime{background:#d9af79;border-color:#d9af79;color:#281b11}.lime:hover{background:#e7c28f;box-shadow:0 2px 5px #0004}.wallet,.outline{background:#1d1915;border-color:#514333;color:#e0d4c7}.wallet:hover,.outline:hover{background:#29231d}.search,select{background:#151310;border-color:#41372e;color:#d3c7ba}.search input::placeholder{color:#9a8c7d}nav button{color:#b2a79c}nav button.active{background:#352b21;color:#edcd9d}nav button:hover{background:#251f19}nav button.active:hover{background:#3b3025}.tabs{border-color:#3a3028}.tabs button{color:#b1a599}.tabs button.active{color:#e0bd8b;border-color:#d9af79}.table-score{background:#3a3025;color:#e4c597}.market-table-wrap{border-color:#40362e;background:#151310}.market-table th{color:#ae9f91;border-color:#40362e}.market-table td{border-color:#332b24}.market-table tbody tr:hover{background:#ffffff03}.table-token small{color:#ae9f91}.table-token small span,.table-token .rank{color:#846f5d}.table-spark svg polyline{stroke:#d3ad7b}.market-table .up{color:#deb985}.display-options>span{color:#a99a8b}.display-options button{color:#ab9e91}.display-options button.selected{background:#302920;border-color:#4b3e31;color:#eadbcb}.large-score,.score-badge{color:#e1bd8b!important}.launch-promo{background:linear-gradient(135deg,#2a221a,#191510);border-color:#503d2b}.launch-promo .eyebrow{color:#c8ab89}.market-foot,footer{color:#9d8d7d}.rail-note{color:#d4c4b3}.rail-note span{color:#aa9b8b}dialog{background:#191613;border-color:#594735}.dialog-copy{color:#bdada0}.dialog-head button{background:#312820}.dialog-head .eyebrow{color:#c6ae92}dialog input,dialog select,.revenue-input{background:#11100e;border-color:#513f30}.score-line{color:#c3b4a5}.score-line b{color:#e2bd8c}
+
+
+/* Premium layer: icon system, brand glow, refined surfaces and motion. */
+.icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+nav button .icon{width:15px;height:15px;opacity:.8;transition:opacity .25s,transform .3s var(--motion-ease)}
+nav button:hover .icon{opacity:1;transform:scale(1.12)}
+nav button.active .icon{opacity:1;filter:drop-shadow(0 0 7px #d9af7973)}
+.banner-feature-grid .icon{width:19px;height:19px}
+nav button{position:relative}
+nav button.active::before{content:"";position:absolute;left:-20px;top:50%;width:3px;height:20px;border-radius:2px;translate:0 -50%;background:linear-gradient(#f0d7b3,#d9af79);box-shadow:0 0 14px #d9af79b3;animation:nav-ind .45s var(--motion-ease)}
+@keyframes nav-ind{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.brand-symbol{border-radius:50%;box-shadow:0 0 0 1px #d9af7933,0 0 18px #d9af7926}
+.brand.brand-refined:hover .brand-symbol{box-shadow:0 0 0 1px #d9af7959,0 0 26px #d9af7940;transform:rotate(3deg) scale(1.04)}
+.brand-symbol{transition:box-shadow .35s,transform .35s var(--motion-ease)}
+
+/* Score ring: champagne sweep with a soft glow. */
+.score-orbit .score-arc{stroke-dasharray:377;stroke-dashoffset:23;filter:drop-shadow(0 0 5px #d9af7966);animation:score-sweep 1.7s var(--motion-ease) .35s both}
+@keyframes score-sweep{from{stroke-dashoffset:377}to{stroke-dashoffset:23}}
+
+/* Market cards: champagne pointer sheen and crisper hover. */
+.market-card{position:relative;overflow:hidden}
+.market-card::before{display:block;content:"";position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:radial-gradient(240px circle at var(--pointer-x,50%) var(--pointer-y,50%),#e7c39217,transparent 72%);opacity:0;transition:opacity .35s}
+.market-card:hover::before{opacity:1}
+.market-card>*{position:relative;z-index:1}
+.market-card:hover,.market-card.motion-enter:hover{border-color:#a9814f;box-shadow:inset 0 1px #ffffff0d,0 10px 28px #0006,0 0 0 1px #d9af7914}
+
+/* Buttons: gold gradient with a light sweep on hover. */
+.lime{position:relative;overflow:hidden;background:linear-gradient(115deg,#eecb9a,#d9af79 55%,#cf9f66);border-color:#e5c391;box-shadow:0 2px 10px #0005,inset 0 1px #fff3}
+.lime::after{content:"";position:absolute;top:-20%;bottom:-20%;left:-75%;width:42%;background:linear-gradient(100deg,transparent,#ffffff2e 40%,#ffffff59 50%,#ffffff2e 60%,transparent);transform:skewX(-18deg);pointer-events:none}
+.lime:hover{background:linear-gradient(115deg,#f4d6ab,#e2ba85 55%,#d8aa72);box-shadow:0 3px 16px #d9af7938,inset 0 1px #fff5;filter:none}
+.lime:hover::after{animation:lime-sheen 1.05s var(--motion-ease)}
+@keyframes lime-sheen{from{left:-75%}to{left:150%}}
+.wallet,.outline{transition:background-color .25s,border-color .25s,box-shadow .3s,transform .2s var(--motion-ease)}
+.wallet:hover,.outline:hover{border-color:#8a6c48;box-shadow:0 0 0 1px #d9af7926,0 4px 14px #0005}
+
+/* Toast: champagne glass pill with a spring entrance. */
+.toast{background:linear-gradient(120deg,#eed3ac,#dcae72);color:#261708;font-weight:600;letter-spacing:.1px;border-radius:11px;padding:13px 24px;box-shadow:0 14px 44px #000c,0 0 0 1px #ffe9c438,0 0 28px #d9af7930;transition:opacity .28s,transform .45s cubic-bezier(.18,.9,.26,1.18)}
+
+/* Radar pill: gentle breathing signal glow. */
+.radar-panel .pill{animation:pill-breathe 3.2s ease-in-out infinite}
+@keyframes pill-breathe{0%,100%{box-shadow:0 0 0 0 #d9af7900}50%{box-shadow:0 0 12px 1px #d9af7940}}
+
+/* Table rows: warmer hover and smooth settle. */
+.market-table tbody tr{transition:background-color .25s}
+.market-table tbody tr:hover{background:#e7c3920a}
+
+/* Dialog: deeper backdrop and a gilded edge. */
+dialog::backdrop{background:#060504b3;backdrop-filter:blur(7px)}
+dialog{box-shadow:0 32px 110px #000d,0 0 0 1px #d9af791f,inset 0 1px #ffffff08}
+
+/* Save star: golden pop when saved. */
+.save{transition:color .2s,transform .2s var(--motion-ease)}
+.save.saved{color:#e7c392;filter:drop-shadow(0 0 6px #d9af7980)}
+
+/* Banner slides: silk-smooth track. */
+#bannerTrack{transition:transform .8s cubic-bezier(.3,.7,.15,1);will-change:transform}
+.detail-button{transition:color .2s,border-color .25s,box-shadow .25s}
+.detail-button:hover{border-color:#8a6c48;box-shadow:0 0 12px #d9af7924}
+
+@media(prefers-reduced-motion:reduce){
+  .score-orbit .score-arc{animation:none}
+  .lime:hover::after{animation:none}
+  .radar-panel .pill{animation:none}
+  nav button.active::before{animation:none}
+  .brand.brand-refined:hover .brand-symbol{transform:none}
+  #bannerTrack{transition:none}
+}
