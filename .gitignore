@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Dependencies and build output
+node_modules/
+*.log
+
+# Analysis caches (keep reports, skip caches)
+graphify-out/cache/
+
+# Editor
+.vscode/
+.idea/

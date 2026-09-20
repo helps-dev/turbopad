@@ -1,0 +1,14 @@
+{
+  "name": "turbopad",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Interactive visual prototype for TurboPad, a meme and RWA launchpad terminal.",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "start": "node scripts/dev-server.mjs",
+    "check": "node --check Web/dist/app.js && node --check Web/dist/terminal.js && node --check Web/dist/motion.js && node --check Web/dist/launch-motion.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

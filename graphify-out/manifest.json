@@ -1,0 +1,62 @@
+{
+  "Web/.openai/hosting.json": {
+    "mtime": 1789815247.0,
+    "seen": 1789914838.914164,
+    "ast_hash": "7daf98f69398152600ee23e7a0085f1c",
+    "semantic_hash": "7daf98f69398152600ee23e7a0085f1c"
+  },
+  "Web/dist/terminal.js": {
+    "mtime": 1789829950.0,
+    "seen": 1789914838.914166,
+    "ast_hash": "8eb80f069806bf0e78cfccd048dd23a9",
+    "semantic_hash": "8eb80f069806bf0e78cfccd048dd23a9"
+  },
+  "Web/dist/launch-motion.js": {
+    "mtime": 1789830922.0,
+    "seen": 1789914838.914167,
+    "ast_hash": "a0cd47b58e733c589b268aadff39a613",
+    "semantic_hash": "a0cd47b58e733c589b268aadff39a613"
+  },
+  "Web/dist/motion.js": {
+    "mtime": 1789825228.0,
+    "seen": 1789914838.914167,
+    "ast_hash": "47a7cc061f1429e066c9e3f132b4dcba",
+    "semantic_hash": "47a7cc061f1429e066c9e3f132b4dcba"
+  },
+  "Web/dist/app.js": {
+    "mtime": 1789825228.0,
+    "seen": 1789914838.9141681,
+    "ast_hash": "786401e27aa00c4c26e7909d20274b88",
+    "semantic_hash": "786401e27aa00c4c26e7909d20274b88"
+  },
+  "Web/dist/index.html": {
+    "mtime": 1789830922.0,
+    "seen": 1789914838.914169,
+    "ast_hash": "068b3e9ede16e3108ad5a6e9bf6bd8f6",
+    "semantic_hash": "068b3e9ede16e3108ad5a6e9bf6bd8f6"
+  },
+  "Web/dist/style.css": {
+    "mtime": 1789913804.0,
+    "seen": 1789914838.91417,
+    "ast_hash": "95066425a31730dd0f0a9be5935e0217",
+    "semantic_hash": "95066425a31730dd0f0a9be5935e0217"
+  },
+  "Web/README.md": {
+    "mtime": 1789815257.0,
+    "seen": 1789914838.914171,
+    "ast_hash": "d7dfc3809e05e6f3339d4b4afec8b219",
+    "semantic_hash": "d7dfc3809e05e6f3339d4b4afec8b219"
+  },
+  "asset/banner.png": {
+    "mtime": 1789848455.3496957,
+    "seen": 1789914838.914171,
+    "ast_hash": "dcb81132293de471f10b7bbde9837b71",
+    "semantic_hash": "dcb81132293de471f10b7bbde9837b71"
+  },
+  "asset/turbopad-logo.png": {
+    "mtime": 1789848081.1107068,
+    "seen": 1789914838.914172,
+    "ast_hash": "fe624fea90c46286a5f3c53b128e4f12",
+    "semantic_hash": "fe624fea90c46286a5f3c53b128e4f12"
+  }
+}
