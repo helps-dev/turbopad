@@ -169,3 +169,24 @@ dialog{box-shadow:0 32px 110px #000d,0 0 0 1px #d9af791f,inset 0 1px #ffffff08}
   .brand.brand-refined:hover .brand-symbol{transform:none}
   #bannerTrack{transition:none}
 }
+
+
+/* Live-data layer: badge, skeletons, token icons and real-state UI. */
+.live-badge{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:#d9af79}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#d9af79;box-shadow:0 0 8px #d9af79;animation:live-pulse 2.4s ease-in-out infinite}
+@keyframes live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+.avatar{position:relative;overflow:hidden}
+.avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.skeleton-card{height:290px;border-radius:9px;border:1px solid #40362d;background:linear-gradient(100deg,#1c1915 40%,#26211a 50%,#1c1915 60%);background-size:220% 100%;animation:skeleton-sweep 1.5s linear infinite}
+.skeleton-row{height:58px;border-radius:8px;margin-bottom:9px;background:linear-gradient(100deg,#161310 40%,#211c16 50%,#161310 60%);background-size:220% 100%;animation:skeleton-sweep 1.5s linear infinite}
+@keyframes skeleton-sweep{from{background-position:120% 0}to{background-position:-120% 0}}
+.chart-loading{display:grid;place-items:center;height:100%;min-height:120px;color:#a99a8b;font-size:12px;letter-spacing:.4px}
+.link-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.link-row a{color:#e0bd8b;border:1px solid #514333;background:#1d1915;border-radius:7px;padding:8px 13px;font-size:12px;text-decoration:none;transition:border-color .2s,background-color .2s}
+.link-row a:hover{border-color:#8a6c48;background:#29231d}
+.link-button{display:block;text-align:center;text-decoration:none;box-sizing:border-box}
+a.lime{border-radius:7px;padding:12px}
+.empty+button{display:block;margin:14px auto 0}
+.battle-panel .fight .muted{font-size:10px;color:#a99a8b;display:block;margin-top:3px}
+.wallet.connected{border-color:#8a6c48;color:#ecd2ad}
+@media(prefers-reduced-motion:reduce){.live-dot{animation:none}.skeleton-card,.skeleton-row{animation:none}}

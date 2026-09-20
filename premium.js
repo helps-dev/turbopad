@@ -1,8 +1,8 @@
-/* Premium polish: eased count-up reveals for stats, price and scores.
-   Purely decorative — values end exactly at their original text. */
+/* Premium polish: eased count-up reveals for live values.
+   Exposed as window.TurboCountUp — callers animate a formatted number inside
+   the first text node of an element, preserving prefix, grouping and decimals. */
 (() => {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  if (reduced.matches) return;
 
   const easeOut = t => 1 - Math.pow(1 - t, 3);
 
@@ -20,14 +20,13 @@
     }, delay + duration + 250);
   }
 
-  // Animate a formatted number inside the first text node of an element,
-  // preserving prefix ("$"), grouping, decimals and any nested suffix element.
-  function animateNumber(element, delay) {
+  function animateNumber(element, delay = 0) {
+    if (reduced.matches || !element) return;
     const node = [...element.childNodes].find(child => child.nodeType === 3 && /\d/.test(child.nodeValue));
     if (!node) return;
-    const match = node.nodeValue.match(/^(\D*)([\d,.]+)/);
+    const match = node.nodeValue.match(/^(\D*)([\d,.]+)([\s\S]*)$/);
     if (!match) return;
-    const [, prefix, digits] = match;
+    const [, prefix, digits, suffix] = match;
     const target = Number(digits.replace(/,/g, ''));
     if (!Number.isFinite(target) || target === 0) return;
     const decimals = (digits.split('.')[1] || '').length;
@@ -38,11 +37,10 @@
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,
         useGrouping: grouped,
-      });
+      }) +
+      suffix;
     countUpTextNode(node, target, format, { delay });
   }
 
-  document.querySelectorAll('.stats strong').forEach((strong, index) => animateNumber(strong, 200 + index * 130));
-  animateNumber(document.querySelector('.overview-price strong') ?? document.createElement('span'), 500);
-  document.querySelectorAll('.score-orbit strong, .large-score').forEach((score, index) => animateNumber(score, 650 + index * 150));
+  window.TurboCountUp = animateNumber;
 })();
