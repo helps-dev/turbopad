@@ -11,18 +11,39 @@ launchpad terminal concept, built as a fast, dependency-free static site.
 
 ## Features
 
-- **Explore** — market discovery with search, launchpad/category filters, and
-  list or card layouts ranked by Turbo Score
-- **Market spotlight** — featured market analysis with multi-period price chart
-  (1H / 24H / 7D) and momentum profile
-- **Turbo Radar** — momentum signal view sorted by Turbo Score
-- **Meme Battles** — community vs. community demo voting
-- **RWA Markets** — concept cards for real-world assets, clearly separated from
-  meme momentum scoring
-- **Creator Studio** — illustrative creator revenue simulator
-- **Watchlist** — persistent across sessions via `localStorage`
-- Responsive desktop and mobile interface with reduced-motion support,
-  native `<dialog>`, and accessibility labeling throughout
+- **Live meme markets** — real-time prices, 24h volume, liquidity and market
+  caps for top boosted tokens via the DexScreener API, refreshed every minute
+- **Live RWA markets** — real Ondo, Mantra, Polymesh, Centrifuge, Maple,
+  Pendle, Goldfinch and Realio quotes via the CoinGecko API
+- **Real charts** — OHLCV price history (1H / 24H / 7D) via the GeckoTerminal
+  API, in the spotlight, radar panel and market detail dialog
+- **Turbo Score** — computed live from real 24h activity: volume (30%),
+  transactions (20%), liquidity depth (20%), momentum (15%), buy pressure (15%)
+- **Live search** — type to filter, press Enter to search all of DexScreener
+- **Wallet connection** — read-only EVM / Solana address connection; the app
+  never requests signatures or funds
+- **Watchlist** — persistent across sessions via stable pair IDs
+- **Meme Battles** — live top-2 matchup with device-persistent voting
+- **Creator Studio** — fee revenue simulator with real arithmetic
+- **Launch planner** — save token drafts locally, publish via real launchpads
+- Loading skeletons, error states with retry, and auto-refresh that pauses
+  when the tab is hidden
+
+## Architecture
+
+```
+Web/dist/
+├── data.js          # API layer: DexScreener, CoinGecko, GeckoTerminal + caching
+├── app.js           # State, rendering, wallet, watchlist, battles, launch planner
+├── terminal.js      # Live market table, spotlight chart, radar panel
+├── launch-motion.js # Featured-market carousel (starts on live data)
+├── motion.js        # Entrance animations (progressive enhancement)
+├── premium.js       # Eased count-up reveals (window.TurboCountUp)
+└── style.css        # Layout, motion, theme palettes, live-data UI
+```
+
+All data is read-only public market data. No backend is required; the site is
+fully static and every API failure degrades to a visible error state with retry.
 
 ## Quick start
 
@@ -69,12 +90,17 @@ runtime dependencies. Scripts load in a defined order (`app.js` → `motion.js` 
 `terminal.js` → `launch-motion.js`); `terminal.js` consumes the
 `window.TurboPad` API and `turbopad:render` events published by `app.js`.
 
-## Data model
+## Data sources
 
-All markets are illustrative constants in `Web/dist/app.js`. Each market has a
-name, symbol, creator, brand color, source launchpad (`TurboPad` / `Pons` /
-`PEEPS` / `RWA`), price, 24h change, volume, market cap, Turbo Score (memes
-only), bonding-curve progress, age, and kind (`meme` / `rwa`).
+| Source | Used for |
+| --- | --- |
+| DexScreener API | Live meme markets, pairs, images, live search |
+| CoinGecko API | Live RWA token quotes (curated basket) |
+| GeckoTerminal API | OHLCV chart history per pair and period |
+
+Turbo Score is calculated locally from the live fields above — no score is
+hard-coded. Watchlist, battle votes, launch drafts and wallet state persist in
+`localStorage` on the device only.
 
 ## Roadmap
 
