@@ -226,24 +226,145 @@
 
   function byId(id) { return state.markets.find(market => market.id === id); }
 
-  function detail(id) {
+  /* ---------- Immersive token page ---------- */
+
+  const tokenPage = $('#tokenPage');
+  const tokenPageBody = $('#tokenPageBody');
+  let tokenPageId = null;
+  let tokenPeriod = '24H';
+
+  function detail(id) { openTokenPage(id); }
+
+  function openTokenPage(id) {
     const market = byId(id);
     if (!market) return;
+    tokenPageId = id;
+    tokenPeriod = '24H';
+    renderTokenPage(market);
+    tokenPage.hidden = false;
+    tokenPage.classList.remove('closing');
+    document.body.classList.add('token-open');
+    tokenPage.scrollTop = 0;
+    if (!location.hash.startsWith('#token/')) history.pushState(null, '', `#token/${encodeURIComponent(id)}`);
+    if (market.kind === 'meme') loadTokenChart(market);
+  }
+
+  function closeTokenPage() {
+    if (tokenPage.hidden) return;
+    tokenPage.classList.add('closing');
+    document.body.classList.remove('token-open');
+    tokenPageId = null;
+    setTimeout(() => { tokenPage.hidden = true; tokenPage.classList.remove('closing'); }, 210);
+  }
+
+  function requestCloseTokenPage() {
+    if (location.hash.startsWith('#token/')) history.back();
+    else closeTokenPage();
+  }
+
+  function bigChart(candles, period) {
+    const width = 720, height = 300;
+    const closes = candles.map(candle => candle.close);
+    const min = Math.min(...closes), max = Math.max(...closes), span = max - min || 1;
+    const stepX = width / Math.max(1, closes.length - 1);
+    const x = index => (index * stepX).toFixed(1);
+    const y = value => (height - 30 - ((value - min) / span) * (height - 70)).toFixed(1);
+    const path = closes.map((close, index) => `${x(index)},${y(close)}`).join(' ');
+    const maxVolume = Math.max(...candles.map(candle => candle.volume || 0), 1);
+    const barWidth = Math.max(2, stepX * 0.45);
+    const bars = candles.map((candle, index) => {
+      const barHeight = 8 + ((candle.volume || 0) / maxVolume) * 34;
+      return `<rect x="${(index * stepX - barWidth / 2).toFixed(1)}" y="${height - barHeight}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" fill="#d9af79" opacity=".12"/>`;
+    }).join('');
+    const ticks = 6;
+    const axis = Array.from({ length: ticks }, (_, tick) => {
+      const candle = candles[Math.round((candles.length - 1) * (tick / (ticks - 1)))];
+      const date = new Date(candle.t);
+      const label = period === '7D'
+        ? date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
+        : date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `<span>${label}</span>`;
+    }).join('');
+    return {
+      svg: `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Live ${period} price chart"><defs><linearGradient id="tpArea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#d9af79" stop-opacity=".22"/><stop offset="1" stop-color="#d9af79" stop-opacity="0"/></linearGradient></defs><path d="M0 45H720M0 110H720M0 175H720M0 240H720" stroke="#ffffff0c" stroke-dasharray="2 6"/>${bars}<polygon points="0,${height} ${path} ${width},${height}" fill="url(#tpArea)"/><polyline points="${path}" fill="none" stroke="#d9af79" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${x(closes.length - 1)}" cy="${y(closes[closes.length - 1])}" r="4.5" fill="#ecd2ad"/></svg>`,
+      axis,
+    };
+  }
+
+  function loadTokenChart(market) {
+    const chartEl = document.getElementById('tpChart');
+    if (!chartEl) return;
+    chartEl.innerHTML = '<div class="chart-loading">Loading live chart…</div>';
+    TurboData.ohlcv(market.chainId, market.id, tokenPeriod)
+      .then(candles => {
+        if (tokenPageId !== market.id) return;
+        const rendered = bigChart(candles, tokenPeriod);
+        const target = document.getElementById('tpChart');
+        const axisEl = document.getElementById('tpAxis');
+        if (target) target.innerHTML = rendered.svg;
+        if (axisEl) axisEl.innerHTML = rendered.axis;
+      })
+      .catch(() => {
+        const target = document.getElementById('tpChart');
+        const axisEl = document.getElementById('tpAxis');
+        if (target) target.innerHTML = sparkline(market, 720, 300);
+        if (axisEl) axisEl.innerHTML = ['-24h', '-18h', '-12h', '-6h', 'Now'].map(label => `<span>${label}</span>`).join('');
+      });
+  }
+
+  function renderTokenPage(market) {
     const saved = state.saved.has(market.id);
+    const total = market.txns.buys + market.txns.sells;
+    const buyShare = total ? Math.round((market.txns.buys / total) * 100) : 0;
     const links = [
       ...market.websites.map(site => ({ label: site.label || 'Website', url: site.url })),
       ...market.socials.map(social => ({ label: social.type || 'Social', url: social.url })),
-    ].slice(0, 3);
-    open(`<div class="token-heading">${avatar(market)}<div><h2>${escapeHtml(market.name)}</h2><span>$${escapeHtml(market.symbol)} · ${escapeHtml(market.source)}</span></div></div><div class="card-price"><strong>$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}% · 24h</span></div><div class="chart" id="detailChart">${sparkline(market)}</div><p class="dialog-copy">${market.kind === 'rwa' ? 'Live RWA token data from CoinGecko. Listing does not constitute endorsement or investment advice.' : 'Live data from DexScreener. Turbo Score measures trading activity — it does not certify token safety.'}</p><div class="score-list"><div class="score-line"><span>24h volume</span><b>$${market.volume}</b></div><div class="score-line"><span>${market.kind === 'rwa' ? 'Market cap' : 'Liquidity'}</span><b>$${market.kind === 'rwa' ? market.cap : market.liquidity}</b></div>${market.kind === 'rwa' ? '' : `<div class="score-line"><span>24h transactions</span><b>${(market.txns.buys + market.txns.sells).toLocaleString('en-US')}</b></div>`}<div class="score-line"><span>${market.kind === 'rwa' ? 'Rank source' : 'Turbo Score'}</span><b>${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score} / 100`}</b></div></div>${links.length ? `<div class="link-row">${links.map(link => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)} ↗</a>`).join('')}</div>` : ''}<button class="outline full" data-save="${escapeHtml(market.id)}">${saved ? 'Remove from' : 'Add to'} watchlist</button><a class="lime full link-button" href="${escapeHtml(market.url)}" target="_blank" rel="noopener noreferrer">Trade on ${market.kind === 'rwa' ? 'CoinGecko' : 'DexScreener'} ↗</a>`);
-    if (market.kind === 'meme') {
-      TurboData.ohlcv(market.chainId, market.id, '24H')
-        .then(candles => {
-          const target = document.getElementById('detailChart');
-          if (target && dialog.open) target.innerHTML = candleChart(candles);
-        })
-        .catch(() => {});
-    }
+    ].slice(0, 4);
+    const stats = market.kind === 'rwa'
+      ? [['24H VOLUME', `$${market.volume}`], ['MARKET CAP', `$${market.cap}`], ['DATA SOURCE', 'CoinGecko'], ['ASSET TYPE', 'RWA token']]
+      : [['24H VOLUME', `$${market.volume}`], ['LIQUIDITY', `$${market.liquidity}`], ['MARKET CAP', `$${market.cap}`], ['TRANSACTIONS', total.toLocaleString('en-US'), '24h'], ['BUYS', market.txns.buys.toLocaleString('en-US')], ['SELLS', market.txns.sells.toLocaleString('en-US')], ['BUY PRESSURE', `${buyShare}%`], ['PAIR AGE', market.ageLabel]];
+    tokenPageBody.innerHTML = `
+      <div class="tp-hero tp-section-anim" style="--tp-delay:0ms">
+        <div class="avatar tp-avatar" style="--avatar:${market.color}">${escapeHtml((market.symbol || '?')[0])}${market.icon ? `<img src="${escapeHtml(market.icon)}" alt="" onerror="this.remove()">` : ''}</div>
+        <div><h2>${escapeHtml(market.name)}<span>$${escapeHtml(market.symbol)}</span></h2><p class="tp-sub">◈ ${escapeHtml(market.source)} · ${escapeHtml(market.creator)}${market.kind === 'meme' ? ` · ϟ Turbo Score ${market.score}` : ''}</p></div>
+        <div class="tp-hero-actions">
+          <button class="outline" data-save="${escapeHtml(market.id)}">${saved ? '★ In watchlist' : '☆ Add to watchlist'}</button>
+          <a class="lime link-button" href="${escapeHtml(market.url)}" target="_blank" rel="noopener noreferrer" style="padding:10px 18px">Trade on ${market.kind === 'rwa' ? 'CoinGecko' : 'DexScreener'} ↗</a>
+        </div>
+      </div>
+      <div class="tp-price-row tp-section-anim" style="--tp-delay:70ms">
+        <span class="tp-price">$${escapeHtml(market.price)}</span>
+        <span class="tp-change ${market.change < 0 ? 'negative' : 'up'}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}% <small>24h</small></span>
+      </div>
+      <div class="tp-panel tp-section-anim" style="--tp-delay:130ms">
+        <div class="chart-tools"><span>PRICE / USD</span><div id="tpRanges" role="group" aria-label="Chart period">${['1H', '24H', '7D'].map(period => `<button data-tp-period="${period}" class="${period === tokenPeriod ? 'selected' : ''}" aria-pressed="${period === tokenPeriod}">${period}</button>`).join('')}</div></div>
+        <div class="tp-chart" id="tpChart">${market.kind === 'rwa' ? sparkline(market, 720, 300) : '<div class="chart-loading">Loading live chart…</div>'}</div>
+        <div class="tp-axis" id="tpAxis"></div>
+      </div>
+      <div class="tp-stats tp-section-anim" style="--tp-delay:190ms">${stats.map(([label, value, note]) => `<div class="tp-stat"><span>${label}</span><b>${escapeHtml(String(value))}${note ? `<small>${note}</small>` : ''}</b></div>`).join('')}</div>
+      ${links.length ? `<div class="link-row tp-section-anim" style="--tp-delay:240ms">${links.map(link => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)} ↗</a>`).join('')}</div>` : ''}
+      <p class="tp-note tp-section-anim" style="--tp-delay:280ms">${market.kind === 'rwa' ? 'Live RWA token data from CoinGecko. A listing is not an endorsement or investment advice.' : 'Live market data from DexScreener and GeckoTerminal. Turbo Score measures trading activity — always verify contracts before trading. TurboPad is read-only and never custodies funds.'}</p>`;
   }
+
+  document.addEventListener('turbopad:ready', () => {
+    const match = location.hash.match(/^#token\/(.+)$/);
+    if (match && !tokenPageId) detail(decodeURIComponent(match[1]));
+  });
+  addEventListener('popstate', () => { if (!location.hash.startsWith('#token/')) closeTokenPage(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !tokenPage.hidden) requestCloseTokenPage(); });
+  $('#tokenBack').onclick = requestCloseTokenPage;
+  tokenPage.addEventListener('click', event => {
+    const button = event.target.closest('[data-tp-period]');
+    if (!button) return;
+    tokenPeriod = button.dataset.tpPeriod;
+    tokenPage.querySelectorAll('[data-tp-period]').forEach(item => {
+      const selected = item === button;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+    const market = byId(tokenPageId);
+    if (market) loadTokenChart(market);
+  });
 
   function candleChart(candles, width = 320, height = 96) {
     const closes = candles.map(candle => candle.close);
@@ -272,7 +393,14 @@
     persist(WATCHLIST_KEY, [...state.saved]);
     render();
     toast(state.saved.has(id) ? 'Added to your watchlist' : 'Removed from your watchlist');
-    if (dialog.open) detail(id);
+    // Keep the open token page in sync without closing it.
+    if (!tokenPage.hidden && tokenPageId === id) {
+      const market = byId(id);
+      if (market) {
+        renderTokenPage(market);
+        if (market.kind === 'meme') loadTokenChart(market);
+      }
+    }
   }
 
   /* ---------- Meme battles (local, persistent) ---------- */
