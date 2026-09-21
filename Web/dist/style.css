@@ -435,6 +435,12 @@ body.token-open{overflow:hidden}
 /* Grid items default to min-width:auto, which lets wide content (the market
    table) blow out the single-column track on narrow viewports. */
 .content-grid > *{min-width:0}
+/* Paint containment stops the wide market table's scrollable overflow from
+   propagating to the page — on mobile it was expanding the layout viewport
+   (innerWidth 762 instead of 390), which made fixed overlays (.token-page,
+   .compare-page, .studio-backdrop, .toast) render wider than the screen.
+   Applied on an outer wrapper so the inner wrap keeps overflow-x scrolling. */
+.table-clip{contain:paint}
 /* Safety net: the page itself never scrolls sideways — wide widgets scroll
    inside their own containers instead. */
 body{overflow-x:clip}
