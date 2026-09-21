@@ -438,3 +438,10 @@ body.token-open{overflow:hidden}
 /* Safety net: the page itself never scrolls sideways — wide widgets scroll
    inside their own containers instead. */
 body{overflow-x:clip}
+
+/* ---------- Sparkline period switch ---------- */
+.spark-ranges{display:flex;align-items:center;gap:4px;margin-right:8px;padding-right:10px;border-right:1px solid #343f44}
+.spark-ranges em{font-style:normal;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#8b9aa3;margin-right:3px}
+.spark-ranges button{min-width:34px;text-align:center;transition:color .18s ease,background .18s ease}
+.spark-ranges button:hover{color:#e8ddcd}
+@media(max-width:720px){.spark-ranges{border-right:0;padding-right:0;margin-right:0}}
