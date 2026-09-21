@@ -512,21 +512,31 @@
     const index100 = series => series.map(point => ({ t: point.t, v: (point.close / series[0].close) * 100 }));
     const A = index100(seriesA), B = index100(seriesB);
     const width = 720, height = 300;
+    // Shared time axis: both series are positioned by real timestamps over the
+    // union of their ranges, so a shorter/younger series aligns honestly.
+    const t0 = Math.min(A[0].t, B[0].t);
+    const t1 = Math.max(A[A.length - 1].t, B[B.length - 1].t);
+    const spanT = t1 - t0 || 1;
+    const x = t => (((t - t0) / spanT) * width).toFixed(1);
     const all = [...A.map(p => p.v), ...B.map(p => p.v)];
     const min = Math.min(...all), max = Math.max(...all), span = max - min || 1;
     const y = value => (height - 30 - ((value - min) / span) * (height - 70)).toFixed(1);
     const line = (series, color, widthPx) => {
-      const stepX = width / Math.max(1, series.length - 1);
-      const path = series.map((point, index) => `${(index * stepX).toFixed(1)},${y(point.v)}`).join(' ');
+      const path = series.map(point => `${x(point.t)},${y(point.v)}`).join(' ');
       const last = series[series.length - 1];
-      return `<polyline points="${path}" fill="none" stroke="${color}" stroke-width="${widthPx}" vector-effect="non-scaling-stroke"/><circle cx="${((series.length - 1) * stepX).toFixed(1)}" cy="${y(last.v)}" r="4.5" fill="${color}"/>`;
+      return `<polyline points="${path}" fill="none" stroke="${color}" stroke-width="${widthPx}" vector-effect="non-scaling-stroke"/><circle cx="${x(last.t)}" cy="${y(last.v)}" r="4.5" fill="${color}"/>`;
     };
     chartEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Indexed comparison chart for ${escapeHtml(a.symbol)} and ${escapeHtml(b.symbol)}"><path d="M0 45H720M0 110H720M0 175H720M0 240H720" stroke="#ffffff0c" stroke-dasharray="2 6"/><path d="M0 ${y(100)}H720" stroke="#d9af7933" stroke-dasharray="6 6"/>${line(B, '#a79be6', 1.8)}${line(A, '#d9af79', 2.2)}</svg>`;
     if (axisEl) {
+      // Relative labels (-24h … Now) match the token page axis and can never
+      // duplicate, unlike HH:mm labels on a 24h window.
       const ticks = 6;
+      const hours = spanT / 3600000;
       axisEl.innerHTML = Array.from({ length: ticks }, (_, tick) => {
-        const point = A[Math.round((A.length - 1) * (tick / (ticks - 1)))];
-        return `<span>${new Date(point.t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>`;
+        const back = spanT - (spanT * tick) / (ticks - 1);
+        if (tick === ticks - 1 || back <= 0) return '<span>Now</span>';
+        const label = hours >= 2 ? `−${Math.round(back / 3600000)}h` : `−${Math.round(back / 60000)}m`;
+        return `<span>${label}</span>`;
       }).join('');
     }
     const legend = document.getElementById('cmpLegend');
