@@ -258,7 +258,7 @@ select:focus-visible{border-color:#8a6c48;outline:none;box-shadow:0 0 0 3px #d9a
 @media(min-width:721px) and (max-width:1100px){
   .sidebar{width:64px;padding:22px 10px;align-items:center;overflow:visible}
   .shell{margin-left:64px}
-  .brand-lockup,.network,.sidebar>.eyebrow,.side-bottom{display:none}
+  .brand.brand-refined .brand-lockup,.network,.sidebar>.eyebrow,.side-bottom{display:none}
   .brand.brand-refined{gap:0}
   .brand-symbol{width:36px;height:36px}
   nav{margin-top:26px;gap:8px;width:100%}
