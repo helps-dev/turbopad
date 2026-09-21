@@ -11,3 +11,7 @@ graphify-out/cache/
 # Editor
 .vscode/
 .idea/
+
+# Secrets — NEVER commit
+.env
+.env.local
