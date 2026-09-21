@@ -327,3 +327,56 @@ header.scrolled{box-shadow:0 14px 34px #000a;background:#0d0d0cf5}
   .scroll-progress{display:none}
   header{transition:none}
 }
+
+
+/* Immersive fullscreen token page. */
+body.token-open{overflow:hidden}
+.token-page{position:fixed;inset:0;z-index:40;overflow-y:auto;background:var(--bg,#090909);animation:token-page-in .45s var(--motion-ease)}
+.token-page.closing{animation:token-page-out .22s ease-in forwards}
+@keyframes token-page-in{from{opacity:0;transform:translateY(26px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes token-page-out{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(16px) scale(.99)}}
+.token-page-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:16px 26px;background:#090909d9;backdrop-filter:blur(14px);border-bottom:1px solid #2c261f}
+#tokenBack{display:inline-flex;align-items:center;gap:6px;background:#1d1915;border:1px solid #514333;color:#e0d4c7;border-radius:9px;padding:9px 16px;font-size:13px;transition:border-color .2s,transform .2s var(--motion-ease)}
+#tokenBack:hover{border-color:#8a6c48;transform:translateX(-3px)}
+.token-page-body{max-width:1060px;margin:0 auto;padding:34px 26px 70px}
+.tp-hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:28px}
+.tp-avatar{width:84px;height:84px;border-radius:22px;display:grid;place-items:center;font-size:40px;font-weight:800;color:#14100b;background:var(--avatar,#d9af79);box-shadow:0 0 0 1px #d9af7940,0 0 44px #d9af7930;position:relative;overflow:hidden;flex:none}
+.tp-hero h2{font-size:30px;letter-spacing:-.8px;margin:0}
+.tp-hero h2 span{font-size:13px;color:#a99a8b;font-weight:500;letter-spacing:1.2px;margin-left:10px}
+.tp-hero .tp-sub{color:#a99a8b;font-size:13px;margin-top:6px}
+.tp-hero-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.tp-price-row{display:flex;align-items:baseline;gap:18px;margin:6px 0 26px;flex-wrap:wrap}
+.tp-price{font-size:clamp(34px,5vw,52px);font-weight:550;letter-spacing:-1.6px;font-variant-numeric:tabular-nums}
+.tp-change{font-size:15px;font-weight:600}
+.tp-change.up{color:#e0bd89}.tp-change.negative{color:#dc9e90}
+.tp-panel{border:1px solid #44382d;border-radius:14px;background:linear-gradient(125deg,#191714,#11100e);padding:22px 24px;margin-bottom:22px}
+.tp-chart{height:300px;margin-top:14px}
+.tp-chart svg{width:100%;height:100%;overflow:visible}
+.tp-axis{display:flex;justify-content:space-between;font:10px/1.5 ui-monospace,monospace;color:#7b8a92;margin-top:10px}
+.tp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.tp-stat{border:1px solid #3a3027;border-radius:12px;padding:16px 18px;background:#141210}
+.tp-stat span{display:block;font-size:9.5px;letter-spacing:1.1px;color:#a99a8b;margin-bottom:7px}
+.tp-stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.tp-stat small{color:#8f7e6e;font-size:10px;margin-left:4px}
+.tp-section-anim{animation:tp-rise .55s var(--motion-ease) both;animation-delay:var(--tp-delay,0ms)}
+@keyframes tp-rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.tp-hero .tp-avatar{animation:tp-avatar-in .6s var(--motion-ease) both}
+@keyframes tp-avatar-in{from{opacity:0;transform:scale(.6) rotate(-6deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+.tp-note{color:#8f7e6e;font-size:12px;margin-top:26px;line-height:1.6}
+@media(max-width:720px){
+  .token-page-top{padding:12px 16px}
+  .token-page-body{padding:22px 16px 50px}
+  .tp-hero{gap:14px}
+  .tp-avatar{width:62px;height:62px;font-size:30px;border-radius:17px}
+  .tp-hero h2{font-size:22px}
+  .tp-hero-actions{margin-left:0;width:100%}
+  .tp-hero-actions .lime,.tp-hero-actions .outline{flex:1;text-align:center}
+  .tp-stats{grid-template-columns:1fr 1fr;gap:10px}
+  .tp-chart{height:200px}
+  .tp-panel{padding:16px}
+}
+@media(max-width:360px){.tp-stats{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){
+  .token-page,.token-page.closing{animation:none}
+  .tp-section-anim,.tp-hero .tp-avatar{animation:none}
+}
