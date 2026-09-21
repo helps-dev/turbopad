@@ -30,7 +30,7 @@
   function prepare() {
     if (reduced.matches) return;
     document.documentElement.classList.add('motion-ready');
-    const elements = document.querySelectorAll('.page-title, .stats, .market-card, .radar-panel, .battle-panel, .studio-panel');
+    const elements = document.querySelectorAll('.page-title, .stats, .market-card, .radar-panel, .battle-panel, .studio-panel, .overview, .banner-features, .market-table-wrap, .display-options, .market-foot, footer');
     let index = 0;
     elements.forEach(element => {
       if (seen.has(element)) return;
@@ -41,6 +41,15 @@
         observer.observe(element);
       } else enter(element);
     });
+    // Safety net: never leave content hidden if IntersectionObserver stalls.
+    // Removes the pending state directly (natural opacity) instead of
+    // replaying the entrance animation.
+    clearTimeout(prepare.safety);
+    prepare.safety = setTimeout(() => {
+      document.querySelectorAll('.motion-pending').forEach(element => {
+        element.classList.remove('motion-pending');
+      });
+    }, 2600);
   }
   const mutations = new MutationObserver(prepare);
   mutations.observe(document.querySelector('.content-grid'), { childList: true, subtree: true });
@@ -86,4 +95,27 @@
     tiltCard.style.setProperty('--tilt-y', '0deg');
     tiltCard = undefined;
   }, true);
+
+  /* Scroll layer: progress thread, header elevation, backdrop parallax. */
+  const progressBar = document.createElement('div');
+  progressBar.className = 'scroll-progress';
+  progressBar.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(progressBar);
+  const header = document.querySelector('header');
+  const backdrop = document.querySelector('.studio-backdrop');
+  let scrollFrame = 0;
+  function onScroll() {
+    if (scrollFrame) return;
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      progressBar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
+      header?.classList.toggle('scrolled', scrollY > 8);
+      if (!reduced.matches && backdrop) {
+        backdrop.style.setProperty('--parallax-y', `${Math.min(140, scrollY * 0.08).toFixed(1)}px`);
+      }
+    });
+  }
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 })();

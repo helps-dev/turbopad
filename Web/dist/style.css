@@ -274,3 +274,56 @@ select:focus-visible{border-color:#8a6c48;outline:none;box-shadow:0 0 0 3px #d9a
 }
 @keyframes tooltip-in{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
 @media(prefers-reduced-motion:reduce){nav button:hover::after{animation:none}}
+
+
+/* Full-device responsive coverage. */
+html{scroll-behavior:smooth}
+@media(max-width:560px){
+  .cards{grid-template-columns:1fr}
+}
+@media(max-width:360px){
+  .stats{grid-template-columns:1fr}
+  .stats>div{border-right:0;border-bottom:1px solid var(--line)}
+  .stats>div:last-child{border-bottom:0}
+  .banner-intro h1{font-size:24px}
+  .overview-price strong{font-size:21px}
+  .brand-word{font-size:18px}
+}
+/* Phone landscape: vertical space is precious. */
+@media(max-height:540px) and (max-width:960px){
+  header{height:48px}
+  .launch-motion-banner{min-height:200px;padding:16px;grid-template-columns:1fr 1fr}
+  .banner-intro h1{font-size:22px;margin-bottom:8px}
+  .banner-intro p{font-size:11px;margin-bottom:10px}
+  .banner-features{display:none}
+  .banner-market-art{height:90px}
+  .stats{padding:10px 0;margin-bottom:16px}
+  .stats strong{font-size:17px;margin:2px 0}
+  .overview{margin-bottom:18px}
+  .spotlight-chart{height:130px}
+  main{padding-top:16px}
+}
+/* Very large monitors: keep line lengths humane and rail balanced. */
+@media(min-width:1900px){
+  main{max-width:1780px}
+  .content-grid{grid-template-columns:minmax(0,1fr) 330px}
+  .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* Sticky header with elevation once the page scrolls. */
+header{position:sticky;top:0;z-index:30;transition:box-shadow .3s,background-color .3s}
+header.scrolled{box-shadow:0 14px 34px #000a;background:#0d0d0cf5}
+
+/* Scroll progress: thin champagne thread at the very top. */
+.scroll-progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:70;pointer-events:none;background:linear-gradient(90deg,#8a6c48,#e7c392,#d9af79);transform-origin:left;transform:scaleX(0);opacity:.9}
+@media(max-width:720px){.scroll-progress{height:2px}}
+
+/* Parallax studio light drifting against the scroll. */
+.studio-backdrop{transform:translateY(var(--parallax-y,0px));will-change:transform}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .studio-backdrop{transform:none}
+  .scroll-progress{display:none}
+  header{transition:none}
+}
