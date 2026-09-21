@@ -10,7 +10,7 @@
   const state = {
     view: 'Explore', filter: 'All', query: '', source: 'All chains', layout: 'list',
     saved: loadSet(WATCHLIST_KEY), markets: [], loading: true, error: null, updatedAt: null,
-    wallet: loadJson(WALLET_KEY, null), compare: [],
+    wallet: loadJson(WALLET_KEY, null), compare: [], sort: null,
   };
   let votes = loadJson(VOTES_KEY, null);
   let statsAnimated = false;

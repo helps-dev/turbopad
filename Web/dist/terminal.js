@@ -136,6 +136,41 @@
 
   /* ---------- Market table ---------- */
 
+  const SORT_KEYS = {
+    name: market => market.name.toLowerCase(),
+    price: market => market.priceRaw || 0,
+    change: market => market.change,
+    volume: market => market.volumeRaw || 0,
+    score: market => (market.score == null ? -1 : market.score),
+  };
+
+  function sortMarkets(markets, sort) {
+    if (!sort || !SORT_KEYS[sort.key]) return markets;
+    const read = SORT_KEYS[sort.key];
+    return [...markets].sort((a, b) => {
+      const va = read(a), vb = read(b);
+      const order = va < vb ? -1 : va > vb ? 1 : 0;
+      return sort.dir === 'asc' ? order : -order;
+    });
+  }
+
+  function cycleSort(key) {
+    const state = window.TurboPad.state;
+    const firstDir = key === 'name' ? 'asc' : 'desc';
+    const sort = state.sort;
+    if (!sort || sort.key !== key) state.sort = { key, dir: firstDir };
+    else if (sort.dir === firstDir) state.sort = { key, dir: firstDir === 'asc' ? 'desc' : 'asc' };
+    else state.sort = null;
+    window.TurboPad.render();
+  }
+
+  function sortableTh(key, label, state) {
+    const active = state.sort && state.sort.key === key;
+    const arrow = active ? (state.sort.dir === 'asc' ? '↑' : '↓') : '↕';
+    const ariaSort = active ? (state.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+    return `<th${active ? ' class="sorted"' : ''} aria-sort="${ariaSort}"><button class="th-sort" data-sort="${key}" aria-label="Sort by ${label}${active ? `, currently ${ariaSort}` : ''}">${label}<span class="sort-arrow" aria-hidden="true">${arrow}</span></button></th>`;
+  }
+
   function renderTable(visibleMarkets) {
     const state = window.TurboPad.state;
     if (state.loading && !state.markets.length) {
@@ -152,7 +187,9 @@
     }
     const silent = state.silent;
     const flash = state.flash || new Map();
-    table.innerHTML = `<table class="market-table"><thead><tr><th>Market</th><th>Price</th><th>24h change</th><th>Volume</th><th>Live trend</th><th>Score</th><th><span class="sr-only">Details</span></th></tr></thead><tbody>${visibleMarkets.map((market, rank) => `<tr${silent ? '' : ` class="row-enter" style="--row-delay:${Math.min(rank * 28, 280)}ms"`}><td><div class="table-token"><span class="rank">${String(rank + 1).padStart(2, '0')}</span><div class="avatar" style="--avatar:${market.color}">${escapeHtml(market.symbol[0])}${market.icon ? `<img src="${escapeHtml(market.icon)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div><div><b>${escapeHtml(market.name)}</b><small>${escapeHtml(market.symbol)} <span>· ${escapeHtml(market.source)}</span></small></div></div></td><td class="${flash.get(market.id) ? `tick-${flash.get(market.id)}` : ''}">$${escapeHtml(market.price)}</td><td class="${market.change < 0 ? 'negative' : 'up'}">${market.change > 0 ? '+' : ''}${market.change.toFixed(2)}%</td><td>$${market.volume}</td><td><div class="table-spark">${window.TurboPad.sparkline(market, 96, 36)}</div></td><td><span class="table-score">${market.score ? `ϟ ${market.score}` : 'RWA'}</span></td><td><div class="card-actions"><button class="compare-btn ${state.compare.includes(market.id) ? 'active' : ''}" data-compare="${escapeHtml(market.id)}" aria-label="Compare ${escapeHtml(market.name)}" aria-pressed="${state.compare.includes(market.id)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3.2-3.2M17 16H6l3.2 3.2"/></svg></button><button data-detail="${escapeHtml(market.id)}" aria-label="View ${escapeHtml(market.name)}">↗</button></div></td></tr>`).join('')}</tbody></table>`;
+    const sortedRows = sortMarkets(visibleMarkets, state.sort);
+    const head = `<thead><tr>${sortableTh('name', 'Market', state)}${sortableTh('price', 'Price', state)}${sortableTh('change', '24h change', state)}${sortableTh('volume', 'Volume', state)}<th>Live trend</th>${sortableTh('score', 'Score', state)}<th><span class="sr-only">Details</span></th></tr></thead>`;
+    table.innerHTML = `<table class="market-table">${head}<tbody>${sortedRows.map((market, rank) => `<tr${silent ? '' : ` class="row-enter" style="--row-delay:${Math.min(rank * 28, 280)}ms"`}><td><div class="table-token"><span class="rank">${String(rank + 1).padStart(2, '0')}</span><div class="avatar" style="--avatar:${market.color}">${escapeHtml(market.symbol[0])}${market.icon ? `<img src="${escapeHtml(market.icon)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div><div><b>${escapeHtml(market.name)}</b><small>${escapeHtml(market.symbol)} <span>· ${escapeHtml(market.source)}</span></small></div></div></td><td class="${flash.get(market.id) ? `tick-${flash.get(market.id)}` : ''}">$${escapeHtml(market.price)}</td><td class="${market.change < 0 ? 'negative' : 'up'}">${market.change > 0 ? '+' : ''}${market.change.toFixed(2)}%</td><td>$${market.volume}</td><td><div class="table-spark">${window.TurboPad.sparkline(market, 96, 36)}</div></td><td><span class="table-score">${market.score ? `ϟ ${market.score}` : 'RWA'}</span></td><td><div class="card-actions"><button class="compare-btn ${state.compare.includes(market.id) ? 'active' : ''}" data-compare="${escapeHtml(market.id)}" aria-label="Compare ${escapeHtml(market.name)}" aria-pressed="${state.compare.includes(market.id)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3.2-3.2M17 16H6l3.2 3.2"/></svg></button><button data-detail="${escapeHtml(market.id)}" aria-label="View ${escapeHtml(market.name)}">↗</button></div></td></tr>`).join('')}</tbody></table>`;
   }
 
   /* ---------- Sync & layout ---------- */
@@ -181,6 +218,10 @@
 
   document.getElementById('listView').onclick = () => setLayout('list');
   document.getElementById('gridView').onclick = () => setLayout('grid');
+  table.addEventListener('click', event => {
+    const button = event.target.closest('[data-sort]');
+    if (button) cycleSort(button.dataset.sort);
+  });
   document.getElementById('chartRanges').onclick = event => {
     const button = event.target.closest('[data-period]');
     if (!button) return;
