@@ -10,7 +10,7 @@
   const state = {
     view: 'Explore', filter: 'All', query: '', source: 'All chains', layout: 'list',
     saved: loadSet(WATCHLIST_KEY), markets: [], loading: true, error: null, updatedAt: null,
-    wallet: loadJson(WALLET_KEY, null),
+    wallet: loadJson(WALLET_KEY, null), compare: [],
   };
   let votes = loadJson(VOTES_KEY, null);
   let statsAnimated = false;
@@ -144,7 +144,7 @@
   function card(market) {
     const saved = state.saved.has(market.id);
     const name = escapeHtml(market.name), symbol = escapeHtml(market.symbol);
-    return `<article class="market-card"><div class="card-head">${avatar(market)}<div class="token-info"><h3>${name}</h3><span>$${symbol} · ${market.kind === 'rwa' ? 'RWA token' : escapeHtml(market.ageLabel)}</span></div><button class="save ${saved ? 'saved' : ''}" data-save="${escapeHtml(market.id)}" aria-label="${saved ? 'Remove' : 'Add'} ${name} ${saved ? 'from' : 'to'} watchlist" aria-pressed="${saved}">${saved ? '★' : '☆'}</button></div><div class="card-price"><strong class="${flashClass(market.id)}">$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div><div class="chart">${sparkline(market)}</div><div class="card-metrics"><div><span>24H VOLUME</span><b>$${market.volume}</b></div><div><span>MARKET CAP</span><b>$${market.cap}</b></div><div><span>${market.kind === 'rwa' ? 'SOURCE' : 'TURBO SCORE'}</span><b class="score-badge">${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score}`}</b></div></div><div class="progress-caption"><span>${market.kind === 'rwa' ? 'Listed asset' : 'Liquidity depth'}</span><span>${market.kind === 'rwa' ? escapeHtml(market.ageLabel) : `${market.progress}%`}</span></div><div class="progress"><i style="width:${market.kind === 'rwa' ? 100 : market.progress}%"></i></div><div class="card-bottom"><span class="source-tag">◈ ${escapeHtml(market.source)}</span><button class="detail-button" data-detail="${escapeHtml(market.id)}">View market ↗</button></div></article>`;
+    return `<article class="market-card"><div class="card-head">${avatar(market)}<div class="token-info"><h3>${name}</h3><span>$${symbol} · ${market.kind === 'rwa' ? 'RWA token' : escapeHtml(market.ageLabel)}</span></div><button class="save ${saved ? 'saved' : ''}" data-save="${escapeHtml(market.id)}" aria-label="${saved ? 'Remove' : 'Add'} ${name} ${saved ? 'from' : 'to'} watchlist" aria-pressed="${saved}">${saved ? '★' : '☆'}</button></div><div class="card-price"><strong class="${flashClass(market.id)}">$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div><div class="chart">${sparkline(market)}</div><div class="card-metrics"><div><span>24H VOLUME</span><b>$${market.volume}</b></div><div><span>MARKET CAP</span><b>$${market.cap}</b></div><div><span>${market.kind === 'rwa' ? 'SOURCE' : 'TURBO SCORE'}</span><b class="score-badge">${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score}`}</b></div></div><div class="progress-caption"><span>${market.kind === 'rwa' ? 'Listed asset' : 'Liquidity depth'}</span><span>${market.kind === 'rwa' ? escapeHtml(market.ageLabel) : `${market.progress}%`}</span></div><div class="progress"><i style="width:${market.kind === 'rwa' ? 100 : market.progress}%"></i></div><div class="card-bottom"><span class="source-tag">◈ ${escapeHtml(market.source)}</span><div class="card-actions"><button class="compare-btn ${state.compare.includes(market.id) ? 'active' : ''}" data-compare="${escapeHtml(market.id)}" aria-label="Compare ${name}" aria-pressed="${state.compare.includes(market.id)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3.2-3.2M17 16H6l3.2 3.2"/></svg></button><button class="detail-button" data-detail="${escapeHtml(market.id)}">View market ↗</button></div></div></article>`;
   }
 
   const VIEW_COPY = {
@@ -197,6 +197,7 @@
     document.dispatchEvent(new CustomEvent('turbopad:render', { detail: { state, markets: visible } }));
     // Entrance stagger applies to explicit renders only; silent refreshes stay calm.
     state.silent = false;
+    renderTray();
   }
 
   function setView(nextView) {
@@ -246,6 +247,7 @@
     document.body.classList.add('token-open');
     tokenPage.scrollTop = 0;
     if (!location.hash.startsWith('#token/')) history.pushState(null, '', `#token/${encodeURIComponent(id)}`);
+    renderTray();
     if (market.kind === 'meme') loadTokenChart(market);
   }
 
@@ -254,7 +256,7 @@
     tokenPage.classList.add('closing');
     document.body.classList.remove('token-open');
     tokenPageId = null;
-    setTimeout(() => { tokenPage.hidden = true; tokenPage.classList.remove('closing'); }, 210);
+    setTimeout(() => { tokenPage.hidden = true; tokenPage.classList.remove('closing'); renderTray(); }, 210);
   }
 
   function requestCloseTokenPage() {
@@ -347,11 +349,27 @@
   }
 
   document.addEventListener('turbopad:ready', () => {
-    const match = location.hash.match(/^#token\/(.+)$/);
-    if (match && !tokenPageId) detail(decodeURIComponent(match[1]));
+    const tokenMatch = location.hash.match(/^#token\/(.+)$/);
+    if (tokenMatch && !tokenPageId) detail(decodeURIComponent(tokenMatch[1]));
+    const compareMatch = location.hash.match(/^#compare\/(.+)$/);
+    if (compareMatch && comparePage.hidden) {
+      const ids = decodeURIComponent(compareMatch[1]).split(',').filter(id => byId(id));
+      if (ids.length === 2) {
+        state.compare = ids;
+        syncCompareButtons();
+        openComparePage();
+      }
+    }
   });
-  addEventListener('popstate', () => { if (!location.hash.startsWith('#token/')) closeTokenPage(); });
-  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !tokenPage.hidden) requestCloseTokenPage(); });
+  addEventListener('popstate', () => {
+    if (!location.hash.startsWith('#token/')) closeTokenPage();
+    if (!location.hash.startsWith('#compare/')) closeComparePage();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (!comparePage.hidden) requestCloseComparePage();
+    else if (!tokenPage.hidden) requestCloseTokenPage();
+  });
   $('#tokenBack').onclick = requestCloseTokenPage;
   tokenPage.addEventListener('click', event => {
     const button = event.target.closest('[data-tp-period]');
@@ -377,6 +395,174 @@
     const color = up ? '#d9af79' : '#dc9e90';
     return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Live price chart"><polygon points="0,${height} ${path} ${width},${height}" fill="${color}" opacity=".05"/><polyline points="${path}" fill="none" stroke="${color}" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`;
   }
+
+  /* ---------- Compare mode ---------- */
+
+  const comparePage = $('#comparePage');
+  const compareBody = $('#compareBody');
+  const tray = $('#compareTray');
+
+  function toggleCompare(id) {
+    const market = byId(id);
+    if (!market) return;
+    const index = state.compare.indexOf(id);
+    if (index >= 0) {
+      state.compare.splice(index, 1);
+    } else if (state.compare.length >= 2) {
+      toast('Compare holds two markets — remove one first');
+      return;
+    } else {
+      state.compare.push(id);
+      toast(state.compare.length === 1 ? `$${market.symbol} selected — pick one more to compare` : `Comparing two markets`);
+    }
+    syncCompareButtons();
+    renderTray();
+    if (state.compare.length === 2) openComparePage();
+  }
+
+  function syncCompareButtons() {
+    document.querySelectorAll('[data-compare]').forEach(button => {
+      const active = state.compare.includes(button.dataset.compare);
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
+
+  function renderTray() {
+    const overlayOpen = !tokenPage.hidden || !comparePage.hidden;
+    if (!state.compare.length || overlayOpen) { tray.hidden = true; return; }
+    tray.hidden = false;
+    const picks = state.compare.map(id => {
+      const market = byId(id);
+      if (!market) return '';
+      return `<span class="tray-pick">${avatar(market)}$${escapeHtml(market.symbol)}<button class="tray-clear" data-uncompare="${escapeHtml(id)}" aria-label="Remove ${escapeHtml(market.name)} from compare">×</button></span>`;
+    });
+    tray.innerHTML =
+      picks.join('<span class="tray-vs">VS</span>') +
+      (state.compare.length < 2 ? '<span class="tray-slot">Pick one more</span>' : '') +
+      `<button class="lime" id="compareNow" ${state.compare.length < 2 ? 'disabled' : ''} style="padding:9px 18px">Compare →</button>`;
+  }
+
+  function openComparePage() {
+    if (state.compare.length !== 2) return;
+    const [a, b] = state.compare.map(byId);
+    if (!a || !b) return;
+    renderComparePage(a, b);
+    comparePage.hidden = false;
+    comparePage.classList.remove('closing');
+    document.body.classList.add('token-open');
+    comparePage.scrollTop = 0;
+    if (!location.hash.startsWith('#compare/')) {
+      history.pushState(null, '', `#compare/${encodeURIComponent(state.compare.join(','))}`);
+    }
+    renderTray();
+    loadCompareCharts(a, b);
+  }
+
+  function closeComparePage() {
+    if (comparePage.hidden) return;
+    comparePage.classList.add('closing');
+    document.body.classList.remove('token-open');
+    setTimeout(() => { comparePage.hidden = true; comparePage.classList.remove('closing'); renderTray(); }, 210);
+  }
+
+  function requestCloseComparePage() {
+    if (location.hash.startsWith('#compare/')) history.back();
+    else closeComparePage();
+  }
+
+  function fallbackSeries(market) {
+    const points = [
+      market.change, market.change6h ?? market.change,
+      market.change1h ?? market.change, market.change5m ?? market.change1h ?? market.change,
+    ].map(change => 100 / (1 + (Number(change) || 0) / 100));
+    points.push(100);
+    const start = Date.now() - 24 * 3600 * 1000;
+    return points.map((value, index) => ({ t: start + (index * 24 * 3600 * 1000) / (points.length - 1), close: value }));
+  }
+
+  async function chartSeries(market) {
+    if (market.kind === 'meme') {
+      try { return await TurboData.ohlcv(market.chainId, market.id, '24H'); } catch { /* fall through */ }
+    }
+    return fallbackSeries(market);
+  }
+
+  async function loadCompareCharts(a, b) {
+    const chartEl = document.getElementById('cmpChart');
+    if (!chartEl) return;
+    chartEl.innerHTML = '<div class="chart-loading">Loading live charts…</div>';
+    const [seriesA, seriesB] = await Promise.all([chartSeries(a), chartSeries(b)]);
+    if (comparePage.hidden) return;
+    renderCompareChart(seriesA, seriesB, a, b);
+  }
+
+  function renderCompareChart(seriesA, seriesB, a, b) {
+    const chartEl = document.getElementById('cmpChart');
+    const axisEl = document.getElementById('cmpAxis');
+    if (!chartEl) return;
+    // Index both series to 100 at their first point for a fair overlay.
+    const index100 = series => series.map(point => ({ t: point.t, v: (point.close / series[0].close) * 100 }));
+    const A = index100(seriesA), B = index100(seriesB);
+    const width = 720, height = 300;
+    const all = [...A.map(p => p.v), ...B.map(p => p.v)];
+    const min = Math.min(...all), max = Math.max(...all), span = max - min || 1;
+    const y = value => (height - 30 - ((value - min) / span) * (height - 70)).toFixed(1);
+    const line = (series, color, widthPx) => {
+      const stepX = width / Math.max(1, series.length - 1);
+      const path = series.map((point, index) => `${(index * stepX).toFixed(1)},${y(point.v)}`).join(' ');
+      const last = series[series.length - 1];
+      return `<polyline points="${path}" fill="none" stroke="${color}" stroke-width="${widthPx}" vector-effect="non-scaling-stroke"/><circle cx="${((series.length - 1) * stepX).toFixed(1)}" cy="${y(last.v)}" r="4.5" fill="${color}"/>`;
+    };
+    chartEl.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="Indexed comparison chart for ${escapeHtml(a.symbol)} and ${escapeHtml(b.symbol)}"><path d="M0 45H720M0 110H720M0 175H720M0 240H720" stroke="#ffffff0c" stroke-dasharray="2 6"/><path d="M0 ${y(100)}H720" stroke="#d9af7933" stroke-dasharray="6 6"/>${line(B, '#a79be6', 1.8)}${line(A, '#d9af79', 2.2)}</svg>`;
+    if (axisEl) {
+      const ticks = 6;
+      axisEl.innerHTML = Array.from({ length: ticks }, (_, tick) => {
+        const point = A[Math.round((A.length - 1) * (tick / (ticks - 1)))];
+        return `<span>${new Date(point.t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>`;
+      }).join('');
+    }
+    const legend = document.getElementById('cmpLegend');
+    if (legend) {
+      legend.innerHTML = `<span><i class="legend-dot legend-a"></i>$${escapeHtml(a.symbol)} · indexed to 100</span><span><i class="legend-dot legend-b"></i>$${escapeHtml(b.symbol)} · indexed to 100</span>`;
+    }
+  }
+
+  function renderComparePage(a, b) {
+    const total = market => market.txns.buys + market.txns.sells;
+    const buyShare = market => {
+      const sum = total(market);
+      return sum ? Math.round((market.txns.buys / sum) * 100) : 0;
+    };
+    const col = (market, delay) => `
+      <div class="compare-col tp-section-anim" style="--tp-delay:${delay}ms">
+        <div class="token-heading">${avatar(market)}<div><h3 style="margin:0">${escapeHtml(market.name)}</h3><span>$${escapeHtml(market.symbol)} · ${escapeHtml(market.source)}</span></div>${market.score ? `<b class="large-score">${market.score}<small>/100</small></b>` : ''}</div>
+        <div class="tp-price-row" style="margin-bottom:0"><span class="tp-price">$${escapeHtml(market.price)}</span><span class="tp-change ${market.change < 0 ? 'negative' : 'up'}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div>
+      </div>`;
+    const rows = [
+      ['24H VOLUME', a.volumeRaw, b.volumeRaw, value => `$${TurboData.compact(value)}`],
+      ['LIQUIDITY', a.liquidityRaw, b.liquidityRaw, value => value ? `$${TurboData.compact(value)}` : '—'],
+      ['MARKET CAP', a.capRaw, b.capRaw, value => `$${TurboData.compact(value)}`],
+      ['TRANSACTIONS · 24H', total(a), total(b), value => value.toLocaleString('en-US')],
+      ['BUY PRESSURE', buyShare(a), buyShare(b), value => `${value}%`],
+      ['TURBO SCORE', a.score || 0, b.score || 0, value => value || '—'],
+    ];
+    compareBody.innerHTML = `
+      <div class="compare-cols">${col(a, 0)}${col(b, 70)}</div>
+      <div class="tp-panel tp-section-anim" style="--tp-delay:130ms">
+        <div class="compare-legend" id="cmpLegend"></div>
+        <div class="tp-chart" id="cmpChart"><div class="chart-loading">Loading live charts…</div></div>
+        <div class="tp-axis" id="cmpAxis"></div>
+      </div>
+      <div class="cmp-table tp-section-anim" style="--tp-delay:190ms">${rows.map(([label, valueA, valueB, format]) => {
+        const winA = valueA > valueB, winB = valueB > valueA;
+        return `<div class="cmp-row"><b class="cmp-a ${winA ? 'cmp-win' : ''}">${format(valueA)}</b><span>${label}</span><b class="cmp-b ${winB ? 'cmp-win' : ''}">${format(valueB)}</b></div>`;
+      }).join('')}</div>
+      <p class="tp-note tp-section-anim" style="--tp-delay:240ms">Both series are indexed to 100 at the start of the window so relative performance is comparable. ✦ marks the stronger value in each row. Live data from DexScreener, CoinGecko and GeckoTerminal.</p>`;
+  }
+
+  $('#compareBack').onclick = requestCloseComparePage;
+  document.addEventListener('compare:close', requestCloseComparePage);
 
   /* ---------- Toast & watchlist ---------- */
 
@@ -540,6 +726,9 @@
     if (button.dataset.filter) { state.filter = button.dataset.filter; render(); }
     if ('save' in button.dataset) toggleSaved(button.dataset.save);
     if ('detail' in button.dataset) detail(button.dataset.detail);
+    if ('compare' in button.dataset) toggleCompare(button.dataset.compare);
+    if ('uncompare' in button.dataset) toggleCompare(button.dataset.uncompare);
+    if (button.id === 'compareNow') openComparePage();
     if ('launch' in button.dataset) launch();
     if (button.dataset.vote) castVote(button.dataset.vote);
     if (button.id === 'retryLoad') loadMarkets();
