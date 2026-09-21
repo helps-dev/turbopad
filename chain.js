@@ -14,10 +14,10 @@
   };
   const TESTNET = {
     chainId: 46630,
-    chainIdHex: '0xB60E',
+    chainIdHex: '0xB626',
     name: 'Robinhood Chain Testnet',
     currency: 'ETH',
-    rpc: ['https://rpc.testnet.chain.robinhood.com'],
+    rpc: ['https://robinhood-testnet.drpc.org', 'https://rpc.testnet.chain.robinhood.com'],
     explorer: 'https://explorer.testnet.chain.robinhood.com',
   };
 
