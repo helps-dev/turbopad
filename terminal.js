@@ -188,7 +188,7 @@
     const silent = state.silent;
     const flash = state.flash || new Map();
     const sortedRows = sortMarkets(visibleMarkets, state.sort);
-    const head = `<thead><tr>${sortableTh('name', 'Market', state)}${sortableTh('price', 'Price', state)}${sortableTh('change', '24h change', state)}${sortableTh('volume', 'Volume', state)}<th>Live trend</th>${sortableTh('score', 'Score', state)}<th><span class="sr-only">Details</span></th></tr></thead>`;
+    const head = `<thead><tr>${sortableTh('name', 'Market', state)}${sortableTh('price', 'Price', state)}${sortableTh('change', '24h change', state)}${sortableTh('volume', 'Volume', state)}<th>Trend ${escapeHtml(state.sparkPeriod || '24H')}</th>${sortableTh('score', 'Score', state)}<th><span class="sr-only">Details</span></th></tr></thead>`;
     table.innerHTML = `<table class="market-table">${head}<tbody>${sortedRows.map((market, rank) => `<tr${silent ? '' : ` class="row-enter" style="--row-delay:${Math.min(rank * 28, 280)}ms"`}><td><div class="table-token"><span class="rank">${String(rank + 1).padStart(2, '0')}</span><div class="avatar" style="--avatar:${market.color}">${escapeHtml(market.symbol[0])}${market.icon ? `<img src="${escapeHtml(market.icon)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div><div><b>${escapeHtml(market.name)}</b><small>${escapeHtml(market.symbol)} <span>· ${escapeHtml(market.source)}</span></small></div></div></td><td class="${flash.get(market.id) ? `tick-${flash.get(market.id)}` : ''}">$${escapeHtml(market.price)}</td><td class="${market.change < 0 ? 'negative' : 'up'}">${market.change > 0 ? '+' : ''}${market.change.toFixed(2)}%</td><td>$${market.volume}</td><td><div class="table-spark">${window.TurboPad.sparkline(market, 96, 36)}</div></td><td><span class="table-score">${market.score ? `ϟ ${market.score}` : 'RWA'}</span></td><td><div class="card-actions"><button class="compare-btn ${state.compare.includes(market.id) ? 'active' : ''}" data-compare="${escapeHtml(market.id)}" aria-label="Compare ${escapeHtml(market.name)}" aria-pressed="${state.compare.includes(market.id)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3.2-3.2M17 16H6l3.2 3.2"/></svg></button><button data-detail="${escapeHtml(market.id)}" aria-label="View ${escapeHtml(market.name)}">↗</button></div></td></tr>`).join('')}</tbody></table>`;
   }
 
@@ -200,6 +200,12 @@
     table.hidden = studio || detail.state.layout === 'grid';
     cards.hidden = studio || detail.state.layout !== 'grid';
     if (!studio && detail.state.layout === 'list') renderTable(detail.markets);
+    const sort = detail.state.sort;
+    const sortLabels = { name: 'name', price: 'price', change: '24h change', volume: 'volume', score: 'score' };
+    const rankLabel = document.getElementById('rankLabel');
+    if (rankLabel) rankLabel.textContent = sort && sortLabels[sort.key]
+      ? `Sorted by ${sortLabels[sort.key]} ${sort.dir === 'asc' ? '↑' : '↓'}`
+      : 'Ranked by Turbo Score';
     if (detail.state.view === 'Explore' && detail.markets.length) updateSpotlight(detail.markets);
     else overview.hidden = detail.state.view !== 'Explore';
     if (detail.markets.length) updateRadar(detail.markets);
@@ -221,6 +227,17 @@
   table.addEventListener('click', event => {
     const button = event.target.closest('[data-sort]');
     if (button) cycleSort(button.dataset.sort);
+  });
+  document.getElementById('sparkRanges').addEventListener('click', event => {
+    const button = event.target.closest('[data-spark]');
+    if (!button) return;
+    window.TurboPad.state.sparkPeriod = button.dataset.spark;
+    document.querySelectorAll('#sparkRanges [data-spark]').forEach(item => {
+      const selected = item === button;
+      item.classList.toggle('selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+    window.TurboPad.render();
   });
   document.getElementById('chartRanges').onclick = event => {
     const button = event.target.closest('[data-period]');

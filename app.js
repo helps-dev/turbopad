@@ -10,7 +10,7 @@
   const state = {
     view: 'Explore', filter: 'All', query: '', source: 'All chains', layout: 'list',
     saved: loadSet(WATCHLIST_KEY), markets: [], loading: true, error: null, updatedAt: null,
-    wallet: loadJson(WALLET_KEY, null), compare: [], sort: null,
+    wallet: loadJson(WALLET_KEY, null), compare: [], sort: null, sparkPeriod: '24H',
   };
   let votes = loadJson(VOTES_KEY, null);
   let statsAnimated = false;
@@ -114,22 +114,29 @@
       .sort((a, b) => state.view === 'Turbo Radar' ? (b.score || 0) - (a.score || 0) : 0);
   }
 
-  function sparkline(market, width = 320, height = 96) {
+  function sparkline(market, width = 320, height = 96, period = state.sparkPeriod) {
     // Real multi-window returns from the API, drawn as cumulative performance.
     const now = 100;
-    const points = [
-      ['h24', market.change], ['h6', market.change6h ?? market.change],
-      ['h1', market.change1h ?? market.change], ['m5', market.change5m ?? market.change1h ?? market.change],
-    ].map(([, change]) => now / (1 + (Number(change) || 0) / 100));
+    const m5 = market.change5m ?? market.change1h ?? market.change;
+    const h1 = market.change1h ?? market.change;
+    const h6 = market.change6h ?? market.change;
+    const WINDOWS = {
+      '1H': [h1, m5],
+      '6H': [h6, h1, m5],
+      '24H': [market.change, h6, h1, m5],
+    };
+    const changes = WINDOWS[period] || WINDOWS['24H'];
+    const points = changes.map(change => now / (1 + (Number(change) || 0) / 100));
     points.push(now);
     const min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
     const stepX = width / (points.length - 1);
     const path = points.map((value, index) =>
       `${(index * stepX).toFixed(1)},${(height - 10 - ((value - min) / span) * (height - 24)).toFixed(1)}`
     ).join(' ');
-    const down = market.change < 0;
+    // Colour by the selected period's overall change (first window in the series).
+    const down = (changes[0] ?? market.change) < 0;
     const color = down ? '#dc9e90' : '#d9af79';
-    return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="24 hour trend from live data"><path d="M0 ${height * 0.33}H${width}M0 ${height * 0.7}H${width}" stroke="#4a4238" stroke-dasharray="3 5"/><polygon points="0,${height} ${path} ${width},${height}" fill="${color}" opacity=".05"/><polyline points="${path}" fill="none" stroke="${color}" stroke-width="1.7" vector-effect="non-scaling-stroke"/></svg>`;
+    return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${period} trend from live data"><path d="M0 ${height * 0.33}H${width}M0 ${height * 0.7}H${width}" stroke="#4a4238" stroke-dasharray="3 5"/><polygon points="0,${height} ${path} ${width},${height}" fill="${color}" opacity=".05"/><polyline points="${path}" fill="none" stroke="${color}" stroke-width="1.7" vector-effect="non-scaling-stroke"/></svg>`;
   }
 
   function avatar(market, extraClass = '') {
