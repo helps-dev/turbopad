@@ -421,3 +421,20 @@ body.token-open{overflow:hidden}
   .cmp-row{padding:12px 14px}
 }
 @media(prefers-reduced-motion:reduce){.compare-tray{animation:none}}
+
+/* ---------- Column sorting ---------- */
+.th-sort{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:2px 0;margin:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;border-radius:3px;transition:color .18s ease}
+.th-sort:hover{color:#e8ddcd}
+.th-sort:focus-visible{outline:1px solid #d9af79;outline-offset:2px}
+.th-sort .sort-arrow{font-size:8px;line-height:1;width:9px;color:#d9af79;opacity:.35;transition:opacity .18s ease,transform .18s ease}
+.th-sort:hover .sort-arrow{opacity:.7}
+.market-table th.sorted .th-sort{color:#ecd2ad}
+.market-table th.sorted .sort-arrow{opacity:1;transform:translateY(-.5px)}
+
+/* ---------- Responsive hardening ---------- */
+/* Grid items default to min-width:auto, which lets wide content (the market
+   table) blow out the single-column track on narrow viewports. */
+.content-grid > *{min-width:0}
+/* Safety net: the page itself never scrolls sideways — wide widgets scroll
+   inside their own containers instead. */
+body{overflow-x:clip}
