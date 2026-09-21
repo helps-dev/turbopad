@@ -15,7 +15,7 @@ window.TurboData = (() => {
   const GECKO_NETWORK = {
     solana: 'solana', ethereum: 'eth', base: 'base', bsc: 'bsc',
     arbitrum: 'arbitrum', polygon: 'polygon_pos', avalanche: 'avax',
-    optimism: 'optimism', ton: 'ton',
+    optimism: 'optimism', ton: 'ton', robinhood: 'robinhood',
   };
   const RWA_IDS = [
     'ondo-finance', 'mantra', 'polymesh', 'centrifuge-2',
@@ -209,7 +209,9 @@ window.TurboData = (() => {
 
   const OHLCV_PERIOD = {
     '1H': { path: 'minute', aggregate: 1, limit: 60 },
-    '24H': { path: 'hour', aggregate: 1, limit: 24 },
+    // 5-minute candles: smooth lines for established pairs and usable
+    // resolution for very young pairs (a 3h-old pair still gets ~36 points).
+    '24H': { path: 'minute', aggregate: 5, limit: 288 },
     '7D': { path: 'hour', aggregate: 4, limit: 42 },
   };
 
