@@ -657,14 +657,44 @@
 
   const shortAddress = address => `${address.slice(0, 6)}…${address.slice(-4)}`;
 
+  function walletOnRobinhood() {
+    return state.wallet?.provider === 'EVM' && state.wallet.chainId === TurboChain.ROBINHOOD.chainId;
+  }
+
   function paintWallet() {
     const button = $('#wallet');
-    button.innerHTML = state.wallet ? `◈ &nbsp; ${escapeHtml(shortAddress(state.wallet.address))}` : '◈ &nbsp; Connect wallet';
+    if (!state.wallet) { button.innerHTML = '◈ &nbsp; Connect wallet'; return; }
+    const address = escapeHtml(shortAddress(state.wallet.address));
+    const balance = typeof state.wallet.balance === 'number' ? ` · ${state.wallet.balance.toFixed(4)} ETH` : '';
+    const warn = state.wallet.provider === 'EVM' && !walletOnRobinhood() ? '⚠ ' : '';
+    button.innerHTML = `${warn}◈ &nbsp; ${address}${balance}`;
+  }
+
+  /* Refresh chain id + real balance for an EVM wallet; never throws. */
+  async function refreshWalletState() {
+    if (state.wallet?.provider !== 'EVM') return;
+    try { state.wallet.chainId = await TurboChain.walletChainId(); } catch { /* keep previous */ }
+    try { state.wallet.balance = await TurboChain.getBalance(state.wallet.address); } catch { /* balance stays hidden */ }
+    persist(WALLET_KEY, state.wallet);
+    paintWallet();
   }
 
   async function connectWallet() {
     if (state.wallet) {
-      open(`<h2>Connected wallet</h2><p class="dialog-copy">${escapeHtml(state.wallet.provider)} wallet connected read-only. TurboPad never requests signatures or funds.</p><div class="score-list"><div class="score-line"><span>Address</span><b>${escapeHtml(shortAddress(state.wallet.address))}</b></div></div><button class="outline full" id="disconnectWallet">Disconnect</button>`);
+      const w = state.wallet;
+      const onRobinhood = walletOnRobinhood();
+      const addressLine = w.provider === 'EVM'
+        ? `<a href="${TurboChain.explorerAddress(w.address)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shortAddress(w.address))} ↗</a>`
+        : escapeHtml(shortAddress(w.address));
+      const lines = [
+        `<div class="score-line"><span>Address</span><b>${addressLine}</b></div>`,
+        typeof w.balance === 'number' ? `<div class="score-line"><span>Balance</span><b>${w.balance.toFixed(4)} ETH</b></div>` : '',
+        w.provider === 'EVM' ? `<div class="score-line"><span>Network</span><b>${onRobinhood ? 'Robinhood Chain ✓' : 'Not Robinhood Chain ⚠'}</b></div>` : '',
+      ].join('');
+      const switcher = w.provider === 'EVM' && !onRobinhood
+        ? '<button class="lime full" id="switchToRobinhood">Switch to Robinhood Chain</button>'
+        : '';
+      open(`<h2>Connected wallet</h2><p class="dialog-copy">${escapeHtml(w.provider)} wallet connected read-only. TurboPad never requests signatures or funds.</p><div class="score-list">${lines}</div>${switcher}<button class="outline full" id="disconnectWallet">Disconnect</button>`);
       return;
     }
     try {
@@ -675,6 +705,8 @@
           persist(WALLET_KEY, state.wallet);
           paintWallet();
           toast('EVM wallet connected (read-only)');
+          try { await TurboChain.ensureRobinhood(); } catch { toast('Tip: switch your wallet to Robinhood Chain'); }
+          refreshWalletState();
           return;
         }
       }
@@ -692,6 +724,34 @@
       open('<h2>No wallet detected</h2><p class="dialog-copy">Install a browser wallet to connect. TurboPad only reads your public address — it never requests signatures or funds.</p><div class="link-row"><a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer">MetaMask ↗</a><a href="https://phantom.com/" target="_blank" rel="noopener noreferrer">Phantom ↗</a></div>');
     } catch (error) {
       toast(error?.code === 4001 ? 'Connection request declined' : 'Wallet connection failed');
+    }
+  }
+
+  async function switchToRobinhood() {
+    try {
+      await TurboChain.ensureRobinhood();
+      await refreshWalletState();
+      dialog.close();
+      toast('Wallet is now on Robinhood Chain mainnet');
+    } catch (error) {
+      toast(error?.code === 4001 ? 'Network switch declined' : 'Could not switch network');
+    }
+  }
+
+  /* ---------- Live network chip (real mainnet block height) ---------- */
+
+  async function updateNetChip() {
+    const chip = $('#netChip');
+    if (!chip) return;
+    try {
+      const block = await TurboChain.latestBlock();
+      chip.hidden = false;
+      chip.textContent = `◆ Robinhood Chain · #${block.toLocaleString('en-US')}`;
+      chip.classList.remove('offline');
+    } catch {
+      chip.hidden = false;
+      chip.textContent = '◇ Mainnet RPC offline';
+      chip.classList.add('offline');
     }
   }
 
@@ -756,6 +816,7 @@
       dialog.close();
       toast('Wallet disconnected');
     }
+    if (button.id === 'switchToRobinhood') switchToRobinhood();
     if (button.id === 'closeTrade') dialog.close();
   });
 
@@ -782,8 +843,28 @@
 
   window.TurboPad = { markets: state.markets, state, getVisibleMarkets, chart: candleChart, sparkline, detail, render, setView };
 
+  /* Keep wallet state honest when the user changes account or network. */
+  if (window.ethereum?.on) {
+    window.ethereum.on('chainChanged', () => { if (state.wallet?.provider === 'EVM') refreshWalletState(); });
+    window.ethereum.on('accountsChanged', accounts => {
+      if (state.wallet?.provider !== 'EVM') return;
+      if (!accounts?.[0]) {
+        state.wallet = null;
+        localStorage.removeItem(WALLET_KEY);
+        paintWallet();
+        toast('Wallet disconnected');
+        return;
+      }
+      state.wallet.address = accounts[0];
+      refreshWalletState();
+    });
+  }
+
   paintWallet();
+  refreshWalletState();
   render();
   loadMarkets();
+  updateNetChip();
+  setInterval(() => { if (!document.hidden) updateNetChip(); }, 15000);
   setInterval(() => { if (!document.hidden && !state.loading) loadMarkets({ silent: true }); }, 60000);
 })();
