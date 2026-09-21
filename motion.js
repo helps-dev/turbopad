@@ -53,10 +53,17 @@
       frame = 0;
     } else prepare();
   });
+  let tiltCard;
   document.addEventListener('pointermove', event => {
     if (reduced.matches || !finePointer.matches) return;
     activeCard = event.target.closest('.market-card');
+    if (tiltCard && tiltCard !== activeCard) {
+      tiltCard.style.setProperty('--tilt-x', '0deg');
+      tiltCard.style.setProperty('--tilt-y', '0deg');
+      tiltCard = undefined;
+    }
     if (!activeCard) return;
+    tiltCard = activeCard;
     pointerX = event.clientX;
     pointerY = event.clientY;
     if (frame) return;
@@ -64,8 +71,19 @@
       frame = 0;
       if (!activeCard?.isConnected) return;
       const bounds = activeCard.getBoundingClientRect();
-      activeCard.style.setProperty('--pointer-x', `${pointerX - bounds.left}px`);
-      activeCard.style.setProperty('--pointer-y', `${pointerY - bounds.top}px`);
+      const relX = pointerX - bounds.left;
+      const relY = pointerY - bounds.top;
+      activeCard.style.setProperty('--pointer-x', `${relX}px`);
+      activeCard.style.setProperty('--pointer-y', `${relY}px`);
+      // Subtle 3D tilt toward the pointer (max ~2.4deg).
+      activeCard.style.setProperty('--tilt-y', `${((relX / bounds.width) - 0.5) * 4.8}deg`);
+      activeCard.style.setProperty('--tilt-x', `${(0.5 - (relY / bounds.height)) * 4.8}deg`);
     });
   }, { passive: true });
+  document.addEventListener('pointerleave', () => {
+    if (!tiltCard) return;
+    tiltCard.style.setProperty('--tilt-x', '0deg');
+    tiltCard.style.setProperty('--tilt-y', '0deg');
+    tiltCard = undefined;
+  }, true);
 })();

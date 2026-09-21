@@ -28,6 +28,7 @@
   /* ---------- Live data ---------- */
 
   async function loadMarkets({ silent = false } = {}) {
+    state.silent = silent;
     if (!silent) { state.loading = true; state.error = null; render(); }
     const [meme, rwa] = await Promise.allSettled([TurboData.memeMarkets(), TurboData.rwaMarkets()]);
     const markets = [
@@ -39,6 +40,17 @@
       state.loading = false;
       render();
       return;
+    }
+    // Detect price moves since the last snapshot for tick-flash styling.
+    state.flash = new Map();
+    if (silent) {
+      const previous = new Map(state.markets.map(market => [market.id, market.price]));
+      for (const market of markets) {
+        const before = previous.get(market.id);
+        if (before != null && before !== market.price) {
+          state.flash.set(market.id, Number(market.price) > Number(before) ? 'up' : 'down');
+        }
+      }
     }
     state.markets = markets;
     state.loading = false;
@@ -127,10 +139,12 @@
     return `<div class="avatar ${extraClass}" style="--avatar:${market.color}">${letter}${image}</div>`;
   }
 
+  const flashClass = id => (state.flash?.get(id) ? `tick-${state.flash.get(id)}` : '');
+
   function card(market) {
     const saved = state.saved.has(market.id);
     const name = escapeHtml(market.name), symbol = escapeHtml(market.symbol);
-    return `<article class="market-card"><div class="card-head">${avatar(market)}<div class="token-info"><h3>${name}</h3><span>$${symbol} · ${market.kind === 'rwa' ? 'RWA token' : escapeHtml(market.ageLabel)}</span></div><button class="save ${saved ? 'saved' : ''}" data-save="${escapeHtml(market.id)}" aria-label="${saved ? 'Remove' : 'Add'} ${name} ${saved ? 'from' : 'to'} watchlist" aria-pressed="${saved}">${saved ? '★' : '☆'}</button></div><div class="card-price"><strong>$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div><div class="chart">${sparkline(market)}</div><div class="card-metrics"><div><span>24H VOLUME</span><b>$${market.volume}</b></div><div><span>MARKET CAP</span><b>$${market.cap}</b></div><div><span>${market.kind === 'rwa' ? 'SOURCE' : 'TURBO SCORE'}</span><b class="score-badge">${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score}`}</b></div></div><div class="progress-caption"><span>${market.kind === 'rwa' ? 'Listed asset' : 'Liquidity depth'}</span><span>${market.kind === 'rwa' ? escapeHtml(market.ageLabel) : `${market.progress}%`}</span></div><div class="progress"><i style="width:${market.kind === 'rwa' ? 100 : market.progress}%"></i></div><div class="card-bottom"><span class="source-tag">◈ ${escapeHtml(market.source)}</span><button class="detail-button" data-detail="${escapeHtml(market.id)}">View market ↗</button></div></article>`;
+    return `<article class="market-card"><div class="card-head">${avatar(market)}<div class="token-info"><h3>${name}</h3><span>$${symbol} · ${market.kind === 'rwa' ? 'RWA token' : escapeHtml(market.ageLabel)}</span></div><button class="save ${saved ? 'saved' : ''}" data-save="${escapeHtml(market.id)}" aria-label="${saved ? 'Remove' : 'Add'} ${name} ${saved ? 'from' : 'to'} watchlist" aria-pressed="${saved}">${saved ? '★' : '☆'}</button></div><div class="card-price"><strong class="${flashClass(market.id)}">$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div><div class="chart">${sparkline(market)}</div><div class="card-metrics"><div><span>24H VOLUME</span><b>$${market.volume}</b></div><div><span>MARKET CAP</span><b>$${market.cap}</b></div><div><span>${market.kind === 'rwa' ? 'SOURCE' : 'TURBO SCORE'}</span><b class="score-badge">${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score}`}</b></div></div><div class="progress-caption"><span>${market.kind === 'rwa' ? 'Listed asset' : 'Liquidity depth'}</span><span>${market.kind === 'rwa' ? escapeHtml(market.ageLabel) : `${market.progress}%`}</span></div><div class="progress"><i style="width:${market.kind === 'rwa' ? 100 : market.progress}%"></i></div><div class="card-bottom"><span class="source-tag">◈ ${escapeHtml(market.source)}</span><button class="detail-button" data-detail="${escapeHtml(market.id)}">View market ↗</button></div></article>`;
   }
 
   const VIEW_COPY = {
@@ -181,6 +195,8 @@
     }
     window.TurboPad.markets = state.markets;
     document.dispatchEvent(new CustomEvent('turbopad:render', { detail: { state, markets: visible } }));
+    // Entrance stagger applies to explicit renders only; silent refreshes stay calm.
+    state.silent = false;
   }
 
   function setView(nextView) {
@@ -191,6 +207,13 @@
     $('#search').value = '';
     $('#source').value = 'All chains';
     render();
+    // Soft cross-slide for the content region on every view change.
+    const region = document.querySelector('.content-grid');
+    if (region) {
+      region.classList.remove('view-shift');
+      void region.offsetWidth;
+      region.classList.add('view-shift');
+    }
     if (nextView === 'Meme Battles') battle();
   }
 
