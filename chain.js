@@ -41,12 +41,20 @@
   }
 
   async function rpc(method, params = []) {
+    return rpcOn(ROBINHOOD.rpc, method, params);
+  }
+
+  async function rpcOn(endpoints, method, params = []) {
     let lastError = null;
-    for (const endpoint of ROBINHOOD.rpc) {
+    for (const endpoint of endpoints) {
       try { return await rpcCall(endpoint, method, params); }
       catch (error) { lastError = error; }
     }
-    throw lastError || new Error('No reachable Robinhood Chain RPC');
+    throw lastError || new Error('No reachable RPC endpoint');
+  }
+
+  async function testnetRpc(method, params = []) {
+    return rpcOn(TESTNET.rpc, method, params);
   }
 
   async function latestBlock() {
@@ -96,7 +104,10 @@
     return target;
   }
 
-  const explorerAddress = address => `${ROBINHOOD.explorer}/address/${address}`;
+  const explorerAddress = (address, testnet = false) =>
+    `${testnet ? TESTNET.explorer : ROBINHOOD.explorer}/address/${address}`;
+  const explorerTx = (hash, testnet = false) =>
+    `${testnet ? TESTNET.explorer : ROBINHOOD.explorer}/tx/${hash}`;
 
-  window.TurboChain = { ROBINHOOD, TESTNET, rpc, latestBlock, getBalance, walletChainId, ensureRobinhood, explorerAddress };
+  window.TurboChain = { ROBINHOOD, TESTNET, rpc, testnetRpc, latestBlock, getBalance, walletChainId, ensureRobinhood, explorerAddress, explorerTx };
 })();
