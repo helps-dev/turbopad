@@ -10,6 +10,7 @@ window.TurboData = (() => {
     solana: 'Solana', ethereum: 'Ethereum', base: 'Base', bsc: 'BNB Chain',
     arbitrum: 'Arbitrum', polygon: 'Polygon', avalanche: 'Avalanche',
     optimism: 'Optimism', ton: 'TON', sui: 'Sui', pulsechain: 'PulseChain',
+    robinhood: 'Robinhood', abstract: 'Abstract', unichain: 'Unichain',
   };
   const GECKO_NETWORK = {
     solana: 'solana', ethereum: 'eth', base: 'base', bsc: 'bsc',
