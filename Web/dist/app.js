@@ -5,6 +5,7 @@
   const WATCHLIST_KEY = 'turbopad.watchlist.v2';
   const VOTES_KEY = 'turbopad.battles.v1';
   const DRAFTS_KEY = 'turbopad.launch.drafts.v1';
+  const DEPLOYS_KEY = 'turbopad.deploys.v1';
   const WALLET_KEY = 'turbopad.wallet.v1';
 
   const state = {
@@ -758,7 +759,41 @@
   /* ---------- Launch planner (local drafts, honest outbound) ---------- */
 
   function launch() {
-    open('<h2>Plan your launch.</h2><p class="dialog-copy">Drafts are saved on this device. Publishing a token happens on a real launchpad — TurboPad links you there.</p><form id="launchForm"><label for="tokenName">Token name</label><input id="tokenName" required maxlength="40" placeholder="Turbo Cat"><label for="ticker">Ticker</label><input id="ticker" required maxlength="10" pattern="[A-Za-z0-9]+" placeholder="TCAT"><label for="launchMode">Launch mode</label><select id="launchMode"><option>Fair launch · bonding curve</option><option>Standard · fixed supply</option></select><button class="lime full" type="submit">Save launch draft ↗</button></form>');
+    open('<h2>Plan your launch.</h2><p class="dialog-copy">Drafts are saved on this device. Ready to go live? Deploy a real ERC-20 straight from your wallet — testnet is free, mainnet is one switch away.</p><form id="launchForm"><label for="tokenName">Token name</label><input id="tokenName" required maxlength="40" placeholder="Turbo Cat"><label for="ticker">Ticker</label><input id="ticker" required maxlength="10" pattern="[A-Za-z0-9]+" placeholder="TCAT"><label for="tokenSupply">Total supply</label><input id="tokenSupply" type="number" min="1" step="1" placeholder="1000000000" value="1000000000"><label for="launchMode">Launch mode</label><select id="launchMode"><option>Fair launch · bonding curve</option><option>Standard · fixed supply</option></select><button class="lime full" type="submit">Save launch draft ↗</button><div class="deploy-row"><button class="outline full" type="button" id="deployTestnet">Deploy · testnet (free)</button><button class="outline full deploy-mainnet" type="button" id="deployMainnet">Deploy · mainnet</button></div><p class="dialog-copy fine-print">Deployment is signed by your wallet. TurboPad never holds keys or funds. Contracts are unaudited — test on testnet first.</p></form>');
+  }
+
+  function deployToken(testnet) {
+    if (!state.wallet || state.wallet.provider !== 'EVM') {
+      toast('Connect an EVM wallet first to deploy');
+      return;
+    }
+    const name = $('#tokenName')?.value.trim();
+    const ticker = $('#ticker')?.value.trim();
+    const supply = $('#tokenSupply')?.value.trim();
+    if (!name || !ticker || !supply) {
+      toast('Fill in name, ticker and supply first');
+      return;
+    }
+    if (!testnet) {
+      const ok = window.confirm(`You are about to deploy $${ticker.toUpperCase()} on Robinhood Chain MAINNET.\n\nThis spends real ETH on gas and the contract is unaudited. Continue?`);
+      if (!ok) return;
+    }
+    open(`<h2>Deploying $${escapeHtml(ticker.toUpperCase())}…</h2><p class="dialog-copy" id="deployStatus">Preparing…</p>`);
+    const status = message => { const el = $('#deployStatus'); if (el) el.textContent = message; };
+    TurboDeploy.deploy({ name, symbol: ticker, supply, testnet, onStatus: status })
+      .then(result => {
+        const deploys = loadJson(DEPLOYS_KEY, []);
+        deploys.unshift({ name, ticker: ticker.toUpperCase(), supply, address: result.address, txHash: result.txHash, testnet, created: Date.now() });
+        persist(DEPLOYS_KEY, deploys.slice(0, 20));
+        const net = testnet ? 'testnet' : 'MAINNET';
+        open(`<h2>$${escapeHtml(ticker.toUpperCase())} is live on ${net}.</h2><p class="dialog-copy">Your token contract is confirmed on-chain and the full supply is in your wallet.</p><div class="score-list"><div class="score-line"><span>Contract</span><b><a href="${TurboChain.explorerAddress(result.address, testnet)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shortAddress(result.address))} ↗</a></b></div><div class="score-line"><span>Transaction</span><b><a href="${TurboChain.explorerTx(result.txHash, testnet)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shortAddress(result.txHash))} ↗</a></b></div><div class="score-line"><span>Supply</span><b>${escapeHtml(new Intl.NumberFormat('en-US').format(Number(supply)))} $${escapeHtml(ticker.toUpperCase())}</b></div></div><button class="outline full" id="closeTrade">Done</button>`);
+        toast(`$${ticker.toUpperCase()} deployed on ${net}`);
+      })
+      .catch(error => {
+        const declined = error?.code === 4001;
+        open(`<h2>Deployment ${declined ? 'declined' : 'failed'}.</h2><p class="dialog-copy">${escapeHtml(declined ? 'You declined the signature in your wallet — nothing was sent.' : error?.message || 'Unknown error')}</p><button class="outline full" id="closeTrade">Back</button>`);
+        toast(declined ? 'Signature declined' : 'Deployment failed');
+      });
   }
 
   function saveDraft(event) {
@@ -772,7 +807,7 @@
     };
     drafts.unshift(draft);
     persist(DRAFTS_KEY, drafts.slice(0, 10));
-    open(`<h2>Draft saved.</h2><p class="dialog-copy"><b>${escapeHtml(draft.name)} ($${escapeHtml(draft.ticker)})</b> is stored on this device. When you are ready, publish through an established launchpad:</p><div class="score-list">${drafts.slice(0, 3).map((item, index) => `<div class="score-line"><span>${index === 0 ? 'Latest' : `Draft ${index + 1}`}</span><b>$${escapeHtml(item.ticker)}</b></div>`).join('')}</div><div class="link-row"><a href="https://pump.fun/create" target="_blank" rel="noopener noreferrer">pump.fun ↗</a><a href="https://dexscreener.com" target="_blank" rel="noopener noreferrer">DexScreener ↗</a></div><button class="outline full" id="closeTrade">Back to markets</button>`);
+    open(`<h2>Draft saved.</h2><p class="dialog-copy"><b>${escapeHtml(draft.name)} ($${escapeHtml(draft.ticker)})</b> is stored on this device. When you are ready, deploy it from the launch planner or publish through an established launchpad:</p><div class="score-list">${drafts.slice(0, 3).map((item, index) => `<div class="score-line"><span>${index === 0 ? 'Latest' : `Draft ${index + 1}`}</span><b>$${escapeHtml(item.ticker)}</b></div>`).join('')}</div><div class="link-row"><a href="https://pump.fun/create" target="_blank" rel="noopener noreferrer">pump.fun ↗</a><a href="https://dexscreener.com" target="_blank" rel="noopener noreferrer">DexScreener ↗</a></div><button class="outline full" id="closeTrade">Back to markets</button>`);
   }
 
   /* ---------- Search (local filter + live remote search) ---------- */
@@ -807,6 +842,8 @@
     if ('uncompare' in button.dataset) toggleCompare(button.dataset.uncompare);
     if (button.id === 'compareNow') openComparePage();
     if ('launch' in button.dataset) launch();
+    if (button.id === 'deployTestnet') deployToken(true);
+    if (button.id === 'deployMainnet') deployToken(false);
     if (button.dataset.vote) castVote(button.dataset.vote);
     if (button.id === 'retryLoad') loadMarkets();
     if (button.id === 'disconnectWallet') {
