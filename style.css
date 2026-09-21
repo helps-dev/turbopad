@@ -173,6 +173,8 @@ dialog{box-shadow:0 32px 110px #000d,0 0 0 1px #d9af791f,inset 0 1px #ffffff08}
 
 /* Live-data layer: badge, skeletons, token icons and real-state UI. */
 .live-badge{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:1.2px;color:#d9af79}
+.net-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(217,175,121,.28);background:rgba(217,175,121,.07);font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:10px;font-weight:600;letter-spacing:.4px;color:#d9af79;white-space:nowrap}
+.net-chip.offline{border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:rgba(244,241,235,.45)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:#d9af79;box-shadow:0 0 8px #d9af79;animation:live-pulse 2.4s ease-in-out infinite}
 @keyframes live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
 .avatar{position:relative;overflow:hidden}
@@ -201,6 +203,7 @@ a.lime{border-radius:7px;padding:12px}
   dialog{width:calc(100% - 20px);max-width:100%;margin:auto auto 10px;border-radius:16px;max-height:86vh;overflow:auto}
   dialog[open]{animation:sheet-up .34s var(--motion-ease)}
   .header-right .live-badge{display:none}
+  .header-right .net-chip{display:none}
   .wallet{font-size:11px;padding:8px 11px}
   .controls{flex-direction:column;align-items:stretch}
   .search-row{display:grid;grid-template-columns:1fr auto;gap:8px}
