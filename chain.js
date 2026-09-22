@@ -68,6 +68,8 @@
   }
 
   function walletProvider() {
+    const reown = window.TurboConnect?.getProvider?.();
+    if (reown?.request) return reown;
     return window.ethereum?.request ? window.ethereum : null;
   }
 

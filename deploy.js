@@ -43,7 +43,7 @@
   async function deploy({ name, symbol, supply, testnet = true, onStatus = () => {} }) {
     const artifact = window.TurboTokenArtifact;
     if (!artifact?.bytecode) throw new Error('Token artifact not loaded');
-    const provider = window.ethereum;
+    const provider = window.TurboConnect?.getProvider?.() || window.ethereum;
     if (!provider?.request) throw new Error('No EVM wallet detected');
 
     name = String(name || '').trim();
