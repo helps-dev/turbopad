@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "start": "node scripts/dev-server.mjs",
-    "check": "node --check Web/dist/data.js && node --check Web/dist/chain.js && node --check Web/dist/token-artifact.js && node --check Web/dist/deploy.js && node --check Web/dist/app.js && node --check Web/dist/terminal.js && node --check Web/dist/motion.js && node --check Web/dist/launch-motion.js && node --check Web/dist/premium.js",
+    "check": "node --check Web/dist/data.js && node --check Web/dist/chain.js && node --check Web/dist/token-artifact.js && node --check Web/dist/deploy.js && node --check Web/dist/swap.js && node --check Web/dist/app.js && node --check Web/dist/terminal.js && node --check Web/dist/motion.js && node --check Web/dist/launch-motion.js && node --check Web/dist/premium.js",
     "compile:token": "node scripts/compile-token.mjs"
   },
   "engines": {

@@ -188,6 +188,14 @@ dialog{box-shadow:0 32px 110px #000d,0 0 0 1px #d9af791f,inset 0 1px #ffffff08}
 .deploy-row .full{margin-top:0}
 .deploy-mainnet{border-color:rgba(217,175,121,.45);color:#d9af79}
 .fine-print{font-size:11px;opacity:.65;margin-top:10px}
+.trade-box{max-width:560px}
+.trade-box input,.trade-box select{width:100%;margin:6px 0 12px}
+.trade-meta{min-height:16px;font-size:11px;margin:-6px 0 10px}
+.trade-direction{display:flex;gap:8px;margin:4px 0 12px}
+.trade-direction button{flex:1;padding:9px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);color:rgba(244,241,235,.6);font-size:11px;font-weight:700;letter-spacing:.6px;cursor:pointer;transition:border-color .2s,color .2s,background-color .2s}
+.trade-direction button.selected{border-color:rgba(217,175,121,.55);background:rgba(217,175,121,.1);color:#d9af79}
+.trade-quote{margin:12px 0;padding:12px 14px;border-radius:10px;border:1px dashed rgba(217,175,121,.3);background:rgba(217,175,121,.05);font-size:12.5px;color:rgba(244,241,235,.85);min-height:20px}
+.trade-quote b{color:#d9af79}
 .link-row a{color:#e0bd8b;border:1px solid #514333;background:#1d1915;border-radius:7px;padding:8px 13px;font-size:12px;text-decoration:none;transition:border-color .2s,background-color .2s}
 .link-row a:hover{border-color:#8a6c48;background:#29231d}
 .link-button{display:block;text-align:center;text-decoration:none;box-sizing:border-box}
