@@ -107,6 +107,7 @@ window.TurboData = (() => {
     const liquidity = Number(pair.liquidity?.usd) || 0;
     return {
       id: pair.pairAddress,
+      address: pair.baseToken?.address || null,
       name: pair.baseToken?.name || 'Unknown',
       symbol: pair.baseToken?.symbol || '—',
       creator: pair.dexId || 'DEX',

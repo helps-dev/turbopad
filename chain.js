@@ -21,7 +21,7 @@
     explorer: 'https://explorer.testnet.chain.robinhood.com',
   };
 
-  async function rpcCall(endpoint, method, params, timeoutMs = 8000) {
+  async function rpcCall(endpoint, method, params, timeoutMs = 12000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {

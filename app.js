@@ -158,6 +158,7 @@
   const VIEW_COPY = {
     Explore: { title: 'Your next move.<br><em>Starts here.</em>', subtitle: 'Live markets.<br>Real momentum.', section: 'Discover markets' },
     'Turbo Radar': { title: 'Signal before the crowd.', subtitle: 'Live momentum, liquidity and buy pressure.', section: 'Radar signals' },
+    Trade: { title: 'Trade the chain.', subtitle: 'Buy and sell on Uniswap V3, straight from your wallet.', section: 'Trade' },
     'Meme Battles': { title: 'Community discovery.', subtitle: 'A place in the spotlight.', section: 'Discover markets' },
     'RWA Markets': { title: 'Markets with context.', subtitle: 'Live real-world asset tokens.', section: 'Real-world asset tokens' },
     'Creator Studio': { title: 'Creator Studio.', subtitle: 'Understand the economics behind your next launch.', section: 'Creator tools' },
@@ -173,12 +174,114 @@
     $('#savedCount').textContent = state.saved.size;
     document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === state.view));
     document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === state.filter));
-    $('.controls').hidden = state.view === 'Creator Studio';
-    $('#resultCount').hidden = state.view === 'Creator Studio';
+    const isToolView = state.view === 'Creator Studio' || state.view === 'Trade';
+    $('.controls').hidden = isToolView;
+    $('#resultCount').hidden = isToolView;
   }
 
   function renderStudio() {
     $('#studio').innerHTML = '<div class="studio-panel"><span class="eyebrow">CREATOR REVENUE / SIMULATOR</span><h3>Build a community.<br>Share in its activity.</h3><p class="dialog-copy">Illustrative allocation: a 1% trading fee, with 50% of that fee assigned to the creator.</p><label for="volume">Trading volume in USD</label><input class="revenue-input" type="number" id="volume" value="100000" min="0" step="1000"><div class="revenue-result" id="revenue">$500.00</div><span class="muted">Estimated creator revenue · not a payout</span><div class="allocations"><i></i><i></i><i></i></div><p class="dialog-copy">50% Creator · 30% Protocol · 20% Ecosystem</p><button class="lime" data-launch>Plan a token launch ↗</button></div>';
+  }
+
+  /* ---------- Trade (Uniswap V3 on Robinhood Chain) ---------- */
+
+  const trade = { direction: 'buy', meta: null, quoting: 0 };
+  let tradeQuoteTimer = null;
+
+  function renderTrade() {
+    const panel = $('#trade');
+    if (!panel.dataset.built) {
+      panel.dataset.built = '1';
+      panel.innerHTML = `<div class="studio-panel trade-box"><span class="eyebrow">TRADE / UNISWAP V3 · ROBINHOOD CHAIN</span><h3>Buy &amp; sell.<br>Straight from your wallet.</h3><p class="dialog-copy">Swaps run on the canonical Uniswap V3 deployment. Quotes come live from on-chain pools — your wallet signs every transaction.</p><label for="tradeToken">Token contract address</label><input id="tradeToken" placeholder="0x…" spellcheck="false" autocomplete="off"><div class="trade-meta muted" id="tradeMeta"></div><div class="trade-direction" role="group" aria-label="Trade direction"><button class="selected" id="tradeBuy" type="button">BUY · ETH → token</button><button id="tradeSell" type="button">SELL · token → ETH</button></div><label for="tradeAmount" id="tradeAmountLabel">Amount in ETH</label><input id="tradeAmount" type="number" min="0" step="any" placeholder="0.01"><label for="tradeSlippage">Slippage tolerance</label><select id="tradeSlippage"><option value="50">0.5%</option><option value="100" selected>1%</option><option value="300">3%</option></select><div class="trade-quote" id="tradeQuote">Paste a token address and enter an amount to get a live quote.</div><button class="lime full" id="tradeExecute" type="button">Connect wallet to trade</button><p class="dialog-copy fine-print">Only tokens with a Uniswap V3 pool on Robinhood Chain can be traded. A freshly deployed token needs liquidity first.</p></div>`;
+    }
+    paintTrade();
+  }
+
+  function paintTrade() {
+    const isBuy = trade.direction === 'buy';
+    $('#tradeBuy')?.classList.toggle('selected', isBuy);
+    $('#tradeSell')?.classList.toggle('selected', !isBuy);
+    const label = $('#tradeAmountLabel');
+    if (label) label.textContent = isBuy ? 'Amount in ETH' : `Amount in ${trade.meta?.symbol || 'tokens'}`;
+    const execute = $('#tradeExecute');
+    if (execute) execute.textContent = state.wallet?.provider === 'EVM'
+      ? (isBuy ? 'Buy with ETH ↗' : 'Sell for ETH ↗')
+      : 'Connect wallet to trade';
+  }
+
+  function scheduleTradeQuote() {
+    clearTimeout(tradeQuoteTimer);
+    tradeQuoteTimer = setTimeout(tradeQuote, 500);
+  }
+
+  async function tradeQuote() {
+    const quoteEl = $('#tradeQuote');
+    if (!quoteEl) return;
+    const address = $('#tradeToken').value.trim();
+    const amountText = $('#tradeAmount').value.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address) || !amountText || Number(amountText) <= 0) {
+      quoteEl.textContent = 'Paste a token address and enter an amount to get a live quote.';
+      return;
+    }
+    const ticket = ++trade.quoting;
+    try {
+      if (trade.meta?.address?.toLowerCase() !== address.toLowerCase()) {
+        quoteEl.textContent = 'Reading token contract…';
+        const meta = await TurboSwap.tokenMeta(address);
+        if (ticket !== trade.quoting) return;
+        trade.meta = { address, ...meta };
+        $('#tradeMeta').textContent = `${meta.symbol} · ${meta.decimals} decimals · verified on-chain`;
+        paintTrade();
+      }
+      quoteEl.textContent = 'Quoting on-chain pools…';
+      const isBuy = trade.direction === 'buy';
+      const amountWei = TurboSwap.parseUnits(amountText, isBuy ? 18 : trade.meta.decimals);
+      const { amountOut, fee } = await TurboSwap.quote(isBuy ? TurboSwap.WETH : address, isBuy ? address : TurboSwap.WETH, amountWei);
+      if (ticket !== trade.quoting) return;
+      const outText = isBuy
+        ? `${TurboSwap.formatUnits(amountOut, trade.meta.decimals)} ${trade.meta.symbol}`
+        : `${TurboSwap.formatUnits(amountOut, 18)} ETH`;
+      quoteEl.innerHTML = `≈ <b>${escapeHtml(outText)}</b> · pool fee ${fee / 10000}% · live from Uniswap V3`;
+    } catch (error) {
+      if (ticket !== trade.quoting) return;
+      trade.meta = trade.meta?.address?.toLowerCase() === address.toLowerCase() ? trade.meta : null;
+      quoteEl.textContent = error?.message || 'Quote failed';
+    }
+  }
+
+  async function tradeExecute() {
+    if (!state.wallet || state.wallet.provider !== 'EVM') { connectWallet(); return; }
+    if (!walletOnRobinhood()) {
+      try { await TurboChain.ensureRobinhood(); await refreshWalletState(); }
+      catch { toast('Switch your wallet to Robinhood Chain to trade'); return; }
+    }
+    const address = $('#tradeToken').value.trim();
+    const amountText = $('#tradeAmount').value.trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address)) { toast('Enter a valid token contract address'); return; }
+    if (!amountText || Number(amountText) <= 0) { toast('Enter an amount first'); return; }
+    const status = message => { const el = $('#tradeQuote'); if (el) el.textContent = message; };
+    const isBuy = trade.direction === 'buy';
+    try {
+      const amountWei = TurboSwap.parseUnits(amountText, isBuy ? 18 : (trade.meta?.decimals ?? 18));
+      const execute = isBuy ? TurboSwap.buy : TurboSwap.sell;
+      const result = await execute({ token: address, amountWei, slippageBps: Number($('#tradeSlippage').value), onStatus: status });
+      refreshWalletState();
+      open(`<h2>${isBuy ? 'Buy' : 'Sell'} confirmed.</h2><p class="dialog-copy">Your swap executed on Uniswap V3 · Robinhood Chain mainnet.</p><div class="score-list"><div class="score-line"><span>Transaction</span><b><a href="${TurboChain.explorerTx(result.hash)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shortAddress(result.hash))} ↗</a></b></div><div class="score-line"><span>Pool fee tier</span><b>${result.fee / 10000}%</b></div></div><button class="outline full" id="closeTrade">Done</button>`);
+      toast('Swap confirmed on-chain');
+    } catch (error) {
+      status(error?.code === 4001 ? 'Signature declined — nothing was sent.' : (error?.message || 'Swap failed'));
+      toast(error?.code === 4001 ? 'Signature declined' : 'Swap failed');
+    }
+  }
+
+  function openTrade(tokenAddress) {
+    if (!tokenPage.hidden) closeTokenPage();
+    setView('Trade');
+    const input = $('#tradeToken');
+    if (input && tokenAddress) {
+      input.value = tokenAddress;
+      scheduleTradeQuote();
+    }
   }
 
   function render() {
@@ -197,6 +300,8 @@
     }
     $('#studio').hidden = state.view !== 'Creator Studio';
     if (state.view === 'Creator Studio') renderStudio();
+    $('#trade').hidden = state.view !== 'Trade';
+    if (state.view === 'Trade') renderTrade();
     const foot = document.querySelector('.market-foot span');
     if (foot && state.updatedAt) {
       foot.textContent = `Live data · updated ${state.updatedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
@@ -339,6 +444,7 @@
         <div><h2>${escapeHtml(market.name)}<span>$${escapeHtml(market.symbol)}</span></h2><p class="tp-sub">◈ ${escapeHtml(market.source)} · ${escapeHtml(market.creator)}${market.kind === 'meme' ? ` · ϟ Turbo Score ${market.score}` : ''}</p></div>
         <div class="tp-hero-actions">
           <button class="outline" data-save="${escapeHtml(market.id)}">${saved ? '★ In watchlist' : '☆ Add to watchlist'}</button>
+          ${market.chainId === 'robinhood' && market.address ? `<button class="lime" data-trade="${escapeHtml(market.address)}">Trade on TurboPad ↗</button>` : ''}
           <a class="lime link-button" href="${escapeHtml(market.url)}" target="_blank" rel="noopener noreferrer" style="padding:10px 18px">Trade on ${market.kind === 'rwa' ? 'CoinGecko' : 'DexScreener'} ↗</a>
         </div>
       </div>
@@ -664,11 +770,12 @@
 
   function paintWallet() {
     const button = $('#wallet');
-    if (!state.wallet) { button.innerHTML = '◈ &nbsp; Connect wallet'; return; }
+    if (!state.wallet) { button.innerHTML = '◈ &nbsp; Connect wallet'; paintTrade(); return; }
     const address = escapeHtml(shortAddress(state.wallet.address));
     const balance = typeof state.wallet.balance === 'number' ? ` · ${state.wallet.balance.toFixed(4)} ETH` : '';
     const warn = state.wallet.provider === 'EVM' && !walletOnRobinhood() ? '⚠ ' : '';
     button.innerHTML = `${warn}◈ &nbsp; ${address}${balance}`;
+    paintTrade();
   }
 
   /* Refresh chain id + real balance for an EVM wallet; never throws. */
@@ -844,6 +951,13 @@
     if ('launch' in button.dataset) launch();
     if (button.id === 'deployTestnet') deployToken(true);
     if (button.id === 'deployMainnet') deployToken(false);
+    if (button.dataset.trade) openTrade(button.dataset.trade);
+    if (button.id === 'tradeBuy' || button.id === 'tradeSell') {
+      trade.direction = button.id === 'tradeBuy' ? 'buy' : 'sell';
+      paintTrade();
+      scheduleTradeQuote();
+    }
+    if (button.id === 'tradeExecute') tradeExecute();
     if (button.dataset.vote) castVote(button.dataset.vote);
     if (button.id === 'retryLoad') loadMarkets();
     if (button.id === 'disconnectWallet') {
@@ -872,7 +986,9 @@
       $('#revenue').textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
         .format(Math.max(0, Number(event.target.value) || 0) * 0.005);
     }
+    if (event.target.id === 'tradeToken' || event.target.id === 'tradeAmount') scheduleTradeQuote();
   });
+  document.addEventListener('change', event => { if (event.target.id === 'tradeSlippage') scheduleTradeQuote(); });
   document.addEventListener('submit', event => { if (event.target.id === 'launchForm') saveDraft(event); });
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && state.updatedAt && Date.now() - state.updatedAt > 60000) loadMarkets({ silent: true });
