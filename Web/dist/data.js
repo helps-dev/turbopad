@@ -234,5 +234,19 @@ window.TurboData = (() => {
     });
   }
 
-  return { memeMarkets, searchMarkets, rwaMarkets, ohlcv, compact, priceText };
+  /* Featured token (e.g. official TURBO): live data from DexScreener,
+     pinned ahead of every other market. Returns null when not configured
+     or not indexed yet. */
+  async function featuredMarket() {
+    const address = window.TurboFeatured?.address;
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address || '')) return null;
+    const data = await getJson(`${DEX}/latest/dex/tokens/${address}`);
+    const best = bestPairs(data.pairs)[0];
+    if (!best) return null;
+    const market = mapPair(best);
+    market.featured = true;
+    return market;
+  }
+
+  return { memeMarkets, searchMarkets, rwaMarkets, ohlcv, compact, priceText, featuredMarket };
 })();
