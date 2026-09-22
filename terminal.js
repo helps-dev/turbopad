@@ -56,6 +56,8 @@
     const top = markets.find(market => market.kind === 'meme');
     if (!top) { overview.hidden = true; spotlightId = null; return; }
     overview.hidden = false;
+    const tag = overview.querySelector('.sample-tag');
+    if (tag) tag.textContent = top.featured ? `${window.TurboFeatured?.badge || 'OFFICIAL'} · LIVE DATA` : 'LIVE DATA';
     const heading = overview.querySelector('.overview-heading');
     heading.querySelector('h2').innerHTML = `${escapeHtml(top.name)} <span>${escapeHtml(top.symbol)}</span>`;
     heading.querySelector('p').innerHTML = `${escapeHtml(top.source)} <span>·</span> ${escapeHtml(top.creator)}`;

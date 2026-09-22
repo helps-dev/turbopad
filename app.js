@@ -42,6 +42,15 @@
       render();
       return;
     }
+    // Pin the featured token (e.g. official TURBO) ahead of every market.
+    try {
+      const featured = await TurboData.featuredMarket();
+      if (featured) {
+        const rest = markets.filter(market => market.id !== featured.id);
+        markets.length = 0;
+        markets.push(featured, ...rest);
+      }
+    } catch { /* featured token not configured or not indexed yet */ }
     // Detect price moves since the last snapshot for tick-flash styling.
     state.flash = new Map();
     if (silent) {
@@ -152,7 +161,8 @@
   function card(market) {
     const saved = state.saved.has(market.id);
     const name = escapeHtml(market.name), symbol = escapeHtml(market.symbol);
-    return `<article class="market-card"><div class="card-head">${avatar(market)}<div class="token-info"><h3>${name}</h3><span>$${symbol} · ${market.kind === 'rwa' ? 'RWA token' : escapeHtml(market.ageLabel)}</span></div><button class="save ${saved ? 'saved' : ''}" data-save="${escapeHtml(market.id)}" aria-label="${saved ? 'Remove' : 'Add'} ${name} ${saved ? 'from' : 'to'} watchlist" aria-pressed="${saved}">${saved ? '★' : '☆'}</button></div><div class="card-price"><strong class="${flashClass(market.id)}">$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div><div class="chart">${sparkline(market)}</div><div class="card-metrics"><div><span>24H VOLUME</span><b>$${market.volume}</b></div><div><span>MARKET CAP</span><b>$${market.cap}</b></div><div><span>${market.kind === 'rwa' ? 'SOURCE' : 'TURBO SCORE'}</span><b class="score-badge">${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score}`}</b></div></div><div class="progress-caption"><span>${market.kind === 'rwa' ? 'Listed asset' : 'Liquidity depth'}</span><span>${market.kind === 'rwa' ? escapeHtml(market.ageLabel) : `${market.progress}%`}</span></div><div class="progress"><i style="width:${market.kind === 'rwa' ? 100 : market.progress}%"></i></div><div class="card-bottom"><span class="source-tag">◈ ${escapeHtml(market.source)}</span><div class="card-actions"><button class="compare-btn ${state.compare.includes(market.id) ? 'active' : ''}" data-compare="${escapeHtml(market.id)}" aria-label="Compare ${name}" aria-pressed="${state.compare.includes(market.id)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3.2-3.2M17 16H6l3.2 3.2"/></svg></button><button class="detail-button" data-detail="${escapeHtml(market.id)}">View market ↗</button></div></div></article>`;
+    const featuredBadge = market.featured ? `<span class="featured-badge">${escapeHtml(window.TurboFeatured?.badge || 'OFFICIAL')}</span>` : '';
+    return `<article class="market-card ${market.featured ? 'featured' : ''}"><div class="card-head">${avatar(market)}<div class="token-info"><h3>${name}</h3><span>$${symbol} · ${market.kind === 'rwa' ? 'RWA token' : escapeHtml(market.ageLabel)}</span></div>${featuredBadge}<button class="save ${saved ? 'saved' : ''}" data-save="${escapeHtml(market.id)}" aria-label="${saved ? 'Remove' : 'Add'} ${name} ${saved ? 'from' : 'to'} watchlist" aria-pressed="${saved}">${saved ? '★' : '☆'}</button></div><div class="card-price"><strong class="${flashClass(market.id)}">$${escapeHtml(market.price)}</strong><span class="change ${market.change < 0 ? 'negative' : ''}">${market.change > 0 ? '↗ +' : '↘ '}${market.change.toFixed(2)}%</span></div><div class="chart">${sparkline(market)}</div><div class="card-metrics"><div><span>24H VOLUME</span><b>$${market.volume}</b></div><div><span>MARKET CAP</span><b>$${market.cap}</b></div><div><span>${market.kind === 'rwa' ? 'SOURCE' : 'TURBO SCORE'}</span><b class="score-badge">${market.kind === 'rwa' ? 'CoinGecko' : `ϟ ${market.score}`}</b></div></div><div class="progress-caption"><span>${market.kind === 'rwa' ? 'Listed asset' : 'Liquidity depth'}</span><span>${market.kind === 'rwa' ? escapeHtml(market.ageLabel) : `${market.progress}%`}</span></div><div class="progress"><i style="width:${market.kind === 'rwa' ? 100 : market.progress}%"></i></div><div class="card-bottom"><span class="source-tag">◈ ${escapeHtml(market.source)}</span><div class="card-actions"><button class="compare-btn ${state.compare.includes(market.id) ? 'active' : ''}" data-compare="${escapeHtml(market.id)}" aria-label="Compare ${name}" aria-pressed="${state.compare.includes(market.id)}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8h11l-3.2-3.2M17 16H6l3.2 3.2"/></svg></button><button class="detail-button" data-detail="${escapeHtml(market.id)}">View market ↗</button></div></div></article>`;
   }
 
   const VIEW_COPY = {
@@ -994,7 +1004,7 @@
     if (!document.hidden && state.updatedAt && Date.now() - state.updatedAt > 60000) loadMarkets({ silent: true });
   });
 
-  window.TurboPad = { markets: state.markets, state, getVisibleMarkets, chart: candleChart, sparkline, detail, render, setView };
+  window.TurboPad = { markets: state.markets, state, getVisibleMarkets, chart: candleChart, sparkline, detail, render, setView, loadMarkets };
 
   /* Keep wallet state honest when the user changes account or network. */
   if (window.ethereum?.on) {

@@ -196,6 +196,8 @@ dialog{box-shadow:0 32px 110px #000d,0 0 0 1px #d9af791f,inset 0 1px #ffffff08}
 .trade-direction button.selected{border-color:rgba(217,175,121,.55);background:rgba(217,175,121,.1);color:#d9af79}
 .trade-quote{margin:12px 0;padding:12px 14px;border-radius:10px;border:1px dashed rgba(217,175,121,.3);background:rgba(217,175,121,.05);font-size:12.5px;color:rgba(244,241,235,.85);min-height:20px}
 .trade-quote b{color:#d9af79}
+.featured-badge{align-self:center;padding:3px 9px;border-radius:999px;background:linear-gradient(120deg,#d9af79,#b9874e);color:#171310;font-size:9px;font-weight:800;letter-spacing:1.1px;box-shadow:0 2px 10px rgba(217,175,121,.35)}
+.market-card.featured{border-color:rgba(217,175,121,.5);box-shadow:0 0 0 1px rgba(217,175,121,.25),0 12px 34px rgba(217,175,121,.1)}
 .link-row a{color:#e0bd8b;border:1px solid #514333;background:#1d1915;border-radius:7px;padding:8px 13px;font-size:12px;text-decoration:none;transition:border-color .2s,background-color .2s}
 .link-row a:hover{border-color:#8a6c48;background:#29231d}
 .link-button{display:block;text-align:center;text-decoration:none;box-sizing:border-box}
