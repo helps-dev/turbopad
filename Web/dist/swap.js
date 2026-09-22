@@ -91,6 +91,8 @@
   }
 
   function provider() {
+    const reown = window.TurboConnect?.getProvider?.();
+    if (reown?.request) return reown;
     if (!window.ethereum?.request) throw new Error('No EVM wallet detected');
     return window.ethereum;
   }

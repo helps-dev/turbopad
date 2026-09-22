@@ -7,12 +7,16 @@
     "dev": "node scripts/dev-server.mjs",
     "start": "node scripts/dev-server.mjs",
     "check": "node --check Web/dist/featured.js && node --check Web/dist/data.js && node --check Web/dist/chain.js && node --check Web/dist/token-artifact.js && node --check Web/dist/deploy.js && node --check Web/dist/swap.js && node --check Web/dist/app.js && node --check Web/dist/terminal.js && node --check Web/dist/motion.js && node --check Web/dist/launch-motion.js && node --check Web/dist/premium.js",
-    "compile:token": "node scripts/compile-token.mjs"
+    "compile:token": "node scripts/compile-token.mjs",
+    "build:wallet": "esbuild Web/src/walletconnect.entry.js --bundle --minify --format=iife --outfile=Web/dist/walletconnect.js --define:process.env.NODE_ENV='\"production\"'"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
+    "@reown/appkit": "^1.8.24",
+    "@reown/appkit-adapter-ethers": "^1.8.24",
+    "esbuild": "^0.28.2",
     "ethers": "^6.17.0",
     "solc": "^0.8.26"
   }

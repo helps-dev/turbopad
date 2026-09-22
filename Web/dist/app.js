@@ -797,6 +797,39 @@
     paintWallet();
   }
 
+  /* Lazy-load the Reown AppKit bundle only when the user clicks connect —
+     keeps the initial page fast (the bundle is ~4 MB). */
+  async function ensureTurboConnect() {
+    if (window.TurboConnect?.ready) return;
+    toast('Loading wallet module…');
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'walletconnect.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('wallet-module-failed'));
+      document.body.appendChild(script);
+    });
+  }
+
+  /* Wire account/network change events once per provider (injected or AppKit). */
+  function attachProviderListeners(provider) {
+    if (!provider?.on || provider.__tpWired) return;
+    provider.__tpWired = true;
+    provider.on('chainChanged', () => { if (state.wallet?.provider === 'EVM') refreshWalletState(); });
+    provider.on('accountsChanged', accounts => {
+      if (state.wallet?.provider !== 'EVM') return;
+      if (!accounts?.[0]) {
+        state.wallet = null;
+        localStorage.removeItem(WALLET_KEY);
+        paintWallet();
+        toast('Wallet disconnected');
+        return;
+      }
+      state.wallet.address = accounts[0];
+      refreshWalletState();
+    });
+  }
+
   async function connectWallet() {
     if (state.wallet) {
       const w = state.wallet;
@@ -816,6 +849,20 @@
       return;
     }
     try {
+      // Preferred path: Reown AppKit modal (WalletConnect, QR, mobile wallets).
+      try { await ensureTurboConnect(); } catch { /* module unavailable — fall back to injected */ }
+      if (window.TurboConnect?.ready) {
+        const result = await window.TurboConnect.connect();
+        if (!result?.address) return; // modal closed without connecting
+        state.wallet = { address: result.address, provider: 'EVM' };
+        persist(WALLET_KEY, state.wallet);
+        paintWallet();
+        toast('Wallet connected (read-only)');
+        try { await TurboChain.ensureRobinhood(); } catch { toast('Tip: switch your wallet to Robinhood Chain'); }
+        attachProviderListeners(result.provider);
+        refreshWalletState();
+        return;
+      }
       if (window.ethereum?.request) {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         if (accounts?.[0]) {
@@ -973,6 +1020,7 @@
     if (button.id === 'disconnectWallet') {
       state.wallet = null;
       localStorage.removeItem(WALLET_KEY);
+      window.TurboConnect?.disconnect?.();
       paintWallet();
       dialog.close();
       toast('Wallet disconnected');
@@ -1007,21 +1055,7 @@
   window.TurboPad = { markets: state.markets, state, getVisibleMarkets, chart: candleChart, sparkline, detail, render, setView, loadMarkets };
 
   /* Keep wallet state honest when the user changes account or network. */
-  if (window.ethereum?.on) {
-    window.ethereum.on('chainChanged', () => { if (state.wallet?.provider === 'EVM') refreshWalletState(); });
-    window.ethereum.on('accountsChanged', accounts => {
-      if (state.wallet?.provider !== 'EVM') return;
-      if (!accounts?.[0]) {
-        state.wallet = null;
-        localStorage.removeItem(WALLET_KEY);
-        paintWallet();
-        toast('Wallet disconnected');
-        return;
-      }
-      state.wallet.address = accounts[0];
-      refreshWalletState();
-    });
-  }
+  attachProviderListeners(window.ethereum);
 
   paintWallet();
   refreshWalletState();
