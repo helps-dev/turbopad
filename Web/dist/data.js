@@ -17,9 +17,12 @@ window.TurboData = (() => {
     arbitrum: 'arbitrum', polygon: 'polygon_pos', avalanche: 'avax',
     optimism: 'optimism', ton: 'ton', robinhood: 'robinhood',
   };
+  // CoinGecko ids. Keep in sync with the live API: a renamed or delisted id is
+  // silently dropped from the response, shrinking the basket without an error.
+  // ('maple' was retired when Maple Finance migrated to SYRUP.)
   const RWA_IDS = [
     'ondo-finance', 'mantra', 'polymesh', 'centrifuge-2',
-    'maple', 'pendle', 'goldfinch', 'realio-network',
+    'syrup', 'pendle', 'goldfinch', 'realio-network',
   ];
 
   const cache = new Map();
@@ -174,6 +177,10 @@ window.TurboData = (() => {
         `${COINGECKO}/coins/markets?vs_currency=usd&ids=${RWA_IDS.join(',')}&price_change_percentage=24h`
       );
       if (!Array.isArray(coins) || !coins.length) throw new Error('No RWA markets returned');
+      if (coins.length < RWA_IDS.length) {
+        const missing = RWA_IDS.filter(id => !coins.some(coin => coin.id === id));
+        console.warn(`TurboData: CoinGecko returned no data for ${missing.join(', ')} — id renamed or delisted?`);
+      }
       return coins.map(coin => ({
         id: coin.id,
         name: coin.name,
