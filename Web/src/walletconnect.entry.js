@@ -43,6 +43,13 @@ function ensureModal() {
       icons: [`${window.location.origin}/favicon.png`],
     },
     projectId: PROJECT_ID,
+    // Popular wallets pinned to the first screen; the "All Wallets" view
+    // still offers hundreds more via the WalletConnect explorer.
+    featuredWalletIds: [
+      'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+      'fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa', // Coinbase Wallet
+      '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369', // Rainbow
+    ],
     features: { analytics: false, email: false, socials: false },
     themeMode: 'dark',
     themeVariables: {
@@ -57,18 +64,37 @@ function ensureModal() {
 window.TurboConnect = {
   ready: true,
 
-  /* Open the wallet modal; resolves with {address, provider} or null if closed. */
+  /* Open the wallet modal; resolves with {address, provider} when the user
+     connects, or null when the modal is closed without connecting. */
   connect() {
     const m = ensureModal();
+    // Already connected from a previous session? Return immediately.
+    try {
+      const existing = m.getAddress?.();
+      if (existing) return Promise.resolve({ address: existing, provider: m.getWalletProvider() });
+    } catch { /* fall through to modal flow */ }
     return new Promise(resolve => {
       let settled = false;
-      const finish = value => { if (!settled) { settled = true; unsubscribe?.(); resolve(value); } };
-      const unsubscribe = m.subscribeAccount(account => {
+      let unsubAccount, unsubEvents;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        unsubAccount?.();
+        unsubEvents?.();
+        resolve(value);
+      };
+      unsubAccount = m.subscribeAccount(account => {
         if (account?.isConnected && account.address) {
           finish({ address: account.address, provider: m.getWalletProvider() });
         }
       });
-      m.open().then(() => finish(null)).catch(() => finish(null));
+      unsubEvents = m.subscribeEvents(event => {
+        const name = event?.name || event?.data?.event;
+        if (name === 'MODAL_CLOSE') finish(null);
+      });
+      // NOTE: open() resolves when the modal OPENS, not when it closes —
+      // never use it to detect the end of the flow.
+      m.open().catch(() => finish(null));
     });
   },
 

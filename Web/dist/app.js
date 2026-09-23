@@ -802,13 +802,19 @@
   async function ensureTurboConnect() {
     if (window.TurboConnect?.ready) return;
     toast('Loading wallet module…');
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'walletconnect.js';
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('wallet-module-failed'));
-      document.body.appendChild(script);
-    });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = `walletconnect.js${attempt ? `?retry=${Date.now()}` : ''}`;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('wallet-module-failed'));
+          document.body.appendChild(script);
+        });
+        return;
+      } catch { /* retry once with a cache-buster */ }
+    }
+    throw new Error('wallet-module-failed');
   }
 
   /* Wire account/network change events once per provider (injected or AppKit). */
