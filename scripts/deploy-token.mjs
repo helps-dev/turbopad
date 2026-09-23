@@ -26,7 +26,8 @@ function loadKey() {
   let env = '';
   try { env = readFileSync('.env', 'utf8'); } catch { /* fall through to process.env */ }
   const fromFile = env.match(/^TURBOPAD_DEPLOYER_KEY=(.+)$/m)?.[1]?.trim();
-  const key = fromFile || process.env.TURBOPAD_DEPLOYER_KEY || '';
+  const raw = fromFile || process.env.TURBOPAD_DEPLOYER_KEY || '';
+  const key = raw.startsWith('0x') ? raw : `0x${raw}`;
   if (!/^0x[0-9a-fA-F]{64}$/.test(key)) {
     console.error('ERROR: TURBOPAD_DEPLOYER_KEY missing or invalid. Copy .env.example to .env and fill it in.');
     process.exit(1);
