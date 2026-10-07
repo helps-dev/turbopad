@@ -35,10 +35,22 @@ window.TurboData = (() => {
     });
   }
 
-  async function getJson(url) {
-    const response = await fetch(url, { headers: { accept: 'application/json' } });
-    if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
-    return response.json();
+  async function getJson(url, { timeoutMs = 12000 } = {}) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        headers: { accept: 'application/json' },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
+      return response.json();
+    } catch (error) {
+      if (error?.name === 'AbortError') throw new Error('Market data request timed out. Check your connection and retry.');
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   const clamp01 = value => Math.min(1, Math.max(0, value));
@@ -158,6 +170,10 @@ window.TurboData = (() => {
 
   async function memeMarkets() {
     return cached('meme', 45000, async () => {
+      try {
+        const res = await getJson('/api/markets/meme', { timeoutMs: 5000 });
+        if (res?.success && Array.isArray(res.data) && res.data.length) return res.data;
+      } catch { /* Fallback to direct DexScreener if backend API is not running */ }
       const boosts = await getJson(`${DEX}/token-boosts/top/v1`);
       const addresses = [...new Set(boosts.map(entry => entry.tokenAddress))].slice(0, 20);
       if (!addresses.length) throw new Error('No boosted tokens returned');
@@ -167,12 +183,20 @@ window.TurboData = (() => {
   }
 
   async function searchMarkets(query) {
+    try {
+      const res = await getJson(`/api/markets/search?q=${encodeURIComponent(query)}`, { timeoutMs: 5000 });
+      if (res?.success && Array.isArray(res.data)) return res.data;
+    } catch { /* Fallback to direct search */ }
     const data = await getJson(`${DEX}/latest/dex/search?q=${encodeURIComponent(query)}`);
     return bestPairs(data.pairs).map(mapPair).sort((a, b) => b.score - a.score).slice(0, 12);
   }
 
   async function rwaMarkets() {
     return cached('rwa', 300000, async () => {
+      try {
+        const res = await getJson('/api/markets/rwa', { timeoutMs: 5000 });
+        if (res?.success && Array.isArray(res.data) && res.data.length) return res.data;
+      } catch { /* Fallback to direct CoinGecko */ }
       const coins = await getJson(
         `${COINGECKO}/coins/markets?vs_currency=usd&ids=${RWA_IDS.join(',')}&price_change_percentage=24h`
       );
@@ -228,6 +252,13 @@ window.TurboData = (() => {
     const config = OHLCV_PERIOD[period] || OHLCV_PERIOD['24H'];
     if (!network) throw new Error(`No chart network for ${chainId}`);
     return cached(`ohlcv:${pairAddress}:${period}`, 300000, async () => {
+      try {
+        const res = await getJson(
+          `/api/markets/ohlcv?chainId=${encodeURIComponent(chainId)}&pair=${encodeURIComponent(pairAddress)}&period=${encodeURIComponent(period)}`,
+          { timeoutMs: 5000 }
+        );
+        if (res?.success && Array.isArray(res.data) && res.data.length) return res.data;
+      } catch { /* Fallback to direct GeckoTerminal */ }
       const data = await getJson(
         `${GECKO}/networks/${network}/pools/${pairAddress}/ohlcv/${config.path}` +
         `?aggregate=${config.aggregate}&limit=${config.limit}&currency=usd`

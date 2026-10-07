@@ -14,8 +14,9 @@
       const padded = body.padEnd(Math.ceil(body.length / 64) * 64 || 64, '0');
       return pad32(bytes.length) + padded;
     };
-    const head = pad32(0x60) + pad32(0xa0) + pad32(supplyWei);
-    return head + encodeString(nameBytes) + encodeString(symbolBytes);
+    const encodedName = encodeString(nameBytes);
+    const head = pad32(0x60) + pad32(0x60 + encodedName.length / 2) + pad32(supplyWei);
+    return head + encodedName + encodeString(symbolBytes);
   }
 
   const toHex = value => `0x${value.toString(16)}`;
@@ -51,6 +52,7 @@
     if (!name || name.length > 40) throw new Error('Token name must be 1–40 characters');
     if (!/^[A-Za-z0-9]{1,10}$/.test(symbol)) throw new Error('Ticker must be 1–10 letters or digits');
     const supplyWei = BigInt(supply) * 10n ** 18n;
+    if (supplyWei >= 2n ** 256n) throw new Error('Supply exceeds the ERC-20 limit');
     if (supplyWei <= 0n) throw new Error('Supply must be greater than zero');
 
     onStatus('Preparing wallet on ' + (testnet ? 'Robinhood testnet' : 'Robinhood Chain mainnet') + '…');
@@ -61,11 +63,8 @@
 
     const data = `0x${artifact.bytecode}${encodeConstructor(name, symbol, supplyWei)}`;
 
-    let gas = '0x2DC6C0'; // 3,000,000 fallback
-    try {
-      const estimated = await provider.request({ method: 'eth_estimateGas', params: [{ from, data }] });
-      gas = toHex((BigInt(estimated) * 120n) / 100n); // +20% headroom
-    } catch { /* keep fallback */ }
+    const estimated = await provider.request({ method: 'eth_estimateGas', params: [{ from, data }] });
+    const gas = toHex((BigInt(estimated) * 120n) / 100n);
 
     onStatus('Waiting for your signature in the wallet…');
     const txHash = await provider.request({
@@ -74,7 +73,9 @@
     });
 
     onStatus('Transaction sent — waiting for confirmation…');
-    const receipt = await waitForReceipt(txHash, testnet);
+    let receipt;
+    try { receipt = await waitForReceipt(txHash, testnet); }
+    catch (error) { error.txHash = txHash; throw error; }
     if (!receipt.contractAddress) throw new Error('Confirmed but no contract address returned');
 
     return { address: receipt.contractAddress, txHash, chainId: target.chainId, testnet };

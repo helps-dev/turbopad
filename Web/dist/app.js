@@ -172,17 +172,25 @@
     'Meme Battles': { title: 'Community discovery.', subtitle: 'A place in the spotlight.', section: 'Discover markets' },
     'RWA Markets': { title: 'Markets with context.', subtitle: 'Live real-world asset tokens.', section: 'Real-world asset tokens' },
     'Creator Studio': { title: 'Creator Studio.', subtitle: 'Understand the economics behind your next launch.', section: 'Creator tools' },
-    Watchlist: { title: 'Your next move.', subtitle: 'Your saved markets, ready when you are.', section: 'Saved markets' },
+    Watchlist: { title: 'Your watchlist.', subtitle: 'Your saved markets, ready when you are.', section: 'Saved markets' },
   };
 
   function updateChrome() {
     const copy = VIEW_COPY[state.view];
+    $('#nav').setAttribute('aria-label', 'Primary navigation');
     $('#crumb').textContent = state.view;
     $('#title').innerHTML = copy.title;
     $('#subtitle').innerHTML = copy.subtitle;
     $('#sectionTitle').textContent = copy.section;
     $('#savedCount').textContent = state.saved.size;
-    document.querySelectorAll('[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === state.view));
+    document.querySelectorAll('[data-view]').forEach(button => {
+      const isActive = button.dataset.view === state.view;
+      button.classList.toggle('active', isActive);
+      if (button.closest('#nav')) {
+        if (isActive) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      }
+    });
     document.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === state.filter));
     const isToolView = state.view === 'Creator Studio' || state.view === 'Trade';
     $('.controls').hidden = isToolView;
@@ -195,14 +203,14 @@
 
   /* ---------- Trade (Uniswap V3 on Robinhood Chain) ---------- */
 
-  const trade = { direction: 'buy', meta: null, quoting: 0 };
+  const trade = { direction: 'buy', meta: null, quoting: 0, busy: false };
   let tradeQuoteTimer = null;
 
   function renderTrade() {
     const panel = $('#trade');
     if (!panel.dataset.built) {
       panel.dataset.built = '1';
-      panel.innerHTML = `<div class="studio-panel trade-box"><span class="eyebrow">TRADE / UNISWAP V3 · ROBINHOOD CHAIN</span><h3>Buy &amp; sell.<br>Straight from your wallet.</h3><p class="dialog-copy">Swaps run on the canonical Uniswap V3 deployment. Quotes come live from on-chain pools — your wallet signs every transaction.</p><label for="tradeToken">Token contract address</label><input id="tradeToken" placeholder="0x…" spellcheck="false" autocomplete="off"><div class="trade-meta muted" id="tradeMeta"></div><div class="trade-direction" role="group" aria-label="Trade direction"><button class="selected" id="tradeBuy" type="button">BUY · ETH → token</button><button id="tradeSell" type="button">SELL · token → ETH</button></div><label for="tradeAmount" id="tradeAmountLabel">Amount in ETH</label><input id="tradeAmount" type="number" min="0" step="any" placeholder="0.01"><label for="tradeSlippage">Slippage tolerance</label><select id="tradeSlippage"><option value="50">0.5%</option><option value="100" selected>1%</option><option value="300">3%</option></select><div class="trade-quote" id="tradeQuote">Paste a token address and enter an amount to get a live quote.</div><button class="lime full" id="tradeExecute" type="button">Connect wallet to trade</button><p class="dialog-copy fine-print">Only tokens with a Uniswap V3 pool on Robinhood Chain can be traded. A freshly deployed token needs liquidity first.</p></div>`;
+      panel.innerHTML = `<div class="trade-workspace"><div class="trade-page-heading"><span class="eyebrow">ROBINHOOD CHAIN</span><h1>Trade</h1><p>Swap ETH and tokens directly from your wallet.</p></div><div class="studio-panel trade-box"><div class="trade-card-heading"><h2>Swap</h2><span class="trade-network"><i></i> Mainnet</span></div><div class="trade-direction" role="group" aria-label="Trade direction"><button class="selected" id="tradeBuy" type="button">Buy token</button><button id="tradeSell" type="button">Sell token</button></div><div class="trade-contract"><label for="tradeToken">Token contract</label><input id="tradeToken" placeholder="Paste token address · 0x…" spellcheck="false" autocomplete="off"><div class="trade-meta muted" id="tradeMeta">Choose a token on Robinhood Chain</div></div><div class="trade-amount-card"><label for="tradeAmount" id="tradeAmountLabel">Amount in ETH</label><input id="tradeAmount" type="number" min="0" step="any" placeholder="0.00" inputmode="decimal"><span class="trade-amount-hint">You pay</span></div><div class="trade-output"><span class="trade-output-label">Estimated receive</span><div class="trade-quote" id="tradeQuote" role="status" aria-live="polite">Enter a token and amount to see your quote.</div></div><div class="trade-settings"><label for="tradeSlippage">Slippage tolerance</label><select id="tradeSlippage"><option value="50">0.5%</option><option value="100" selected>1%</option><option value="300">3%</option></select></div><button class="lime full" id="tradeExecute" type="button">Connect wallet to trade</button><div class="trade-powered">Route via <strong>Uniswap V3</strong><span>Wallet confirmation required</span></div></div><p class="trade-support-note">Supports Uniswap V3 pools on Robinhood Chain. V4 pools are not supported.</p></div>`;
     }
     paintTrade();
   }
@@ -211,6 +219,8 @@
     const isBuy = trade.direction === 'buy';
     $('#tradeBuy')?.classList.toggle('selected', isBuy);
     $('#tradeSell')?.classList.toggle('selected', !isBuy);
+    $('#tradeBuy')?.setAttribute('aria-pressed', String(isBuy));
+    $('#tradeSell')?.setAttribute('aria-pressed', String(!isBuy));
     const label = $('#tradeAmountLabel');
     if (label) label.textContent = isBuy ? 'Amount in ETH' : `Amount in ${trade.meta?.symbol || 'tokens'}`;
     const execute = $('#tradeExecute');
@@ -221,6 +231,12 @@
 
   function scheduleTradeQuote() {
     clearTimeout(tradeQuoteTimer);
+    trade.quoting++;
+    const address = $('#tradeToken').value.trim();
+    if (trade.meta?.address?.toLowerCase() !== address.toLowerCase()) {
+      trade.meta = null; $('#tradeMeta').textContent = 'Choose a token on Robinhood Chain'; paintTrade();
+    }
+    $('#tradeQuote').textContent = 'Enter a token and amount to see your quote.';
     tradeQuoteTimer = setTimeout(tradeQuote, 500);
   }
 
@@ -230,7 +246,9 @@
     const address = $('#tradeToken').value.trim();
     const amountText = $('#tradeAmount').value.trim();
     if (!/^0x[0-9a-fA-F]{40}$/.test(address) || !amountText || Number(amountText) <= 0) {
-      quoteEl.textContent = 'Paste a token address and enter an amount to get a live quote.';
+      trade.quoting++;
+      if (trade.meta?.address?.toLowerCase() !== address.toLowerCase()) { trade.meta = null; $('#tradeMeta').textContent = 'Choose a token on Robinhood Chain'; paintTrade(); }
+      quoteEl.textContent = address && !/^0x[0-9a-fA-F]{40}$/.test(address) ? 'Enter a valid token contract address.' : 'Enter a token and amount to see your quote.';
       return;
     }
     const ticket = ++trade.quoting;
@@ -240,7 +258,7 @@
         const meta = await TurboSwap.tokenMeta(address);
         if (ticket !== trade.quoting) return;
         trade.meta = { address, ...meta };
-        $('#tradeMeta').textContent = `${meta.symbol} · ${meta.decimals} decimals · verified on-chain`;
+        $('#tradeMeta').textContent = `${meta.symbol} · ${meta.decimals} decimals · read from contract`;
         paintTrade();
       }
       quoteEl.textContent = 'Quoting on-chain pools…';
@@ -260,19 +278,24 @@
   }
 
   async function tradeExecute() {
+    if (trade.busy) return;
     if (!state.wallet || state.wallet.provider !== 'EVM') { connectWallet(); return; }
-    if (!walletOnRobinhood()) {
-      try { await TurboChain.ensureRobinhood(); await refreshWalletState(); }
-      catch { toast('Switch your wallet to Robinhood Chain to trade'); return; }
-    }
     const address = $('#tradeToken').value.trim();
     const amountText = $('#tradeAmount').value.trim();
     if (!/^0x[0-9a-fA-F]{40}$/.test(address)) { toast('Enter a valid token contract address'); return; }
     if (!amountText || Number(amountText) <= 0) { toast('Enter an amount first'); return; }
     const status = message => { const el = $('#tradeQuote'); if (el) el.textContent = message; };
     const isBuy = trade.direction === 'buy';
+    trade.busy = true;
+    clearTimeout(tradeQuoteTimer); trade.quoting++;
+    const controls = Array.from($('#trade').querySelectorAll('input, select, button'));
+    controls.forEach(el => el.disabled = true);
     try {
-      const amountWei = TurboSwap.parseUnits(amountText, isBuy ? 18 : (trade.meta?.decimals ?? 18));
+      if (!isBuy && trade.meta?.address?.toLowerCase() !== address.toLowerCase()) {
+        status('Reading token decimals…');
+        trade.meta = { address, ...await TurboSwap.tokenMeta(address) };
+      }
+      const amountWei = TurboSwap.parseUnits(amountText, isBuy ? 18 : trade.meta.decimals);
       const execute = isBuy ? TurboSwap.buy : TurboSwap.sell;
       const result = await execute({ token: address, amountWei, slippageBps: Number($('#tradeSlippage').value), onStatus: status });
       refreshWalletState();
@@ -280,8 +303,9 @@
       toast('Swap confirmed on-chain');
     } catch (error) {
       status(error?.code === 4001 ? 'Signature declined — nothing was sent.' : (error?.message || 'Swap failed'));
-      toast(error?.code === 4001 ? 'Signature declined' : 'Swap failed');
-    }
+      if (error?.txHash) { const link = document.createElement('a'); link.href = TurboChain.explorerTx(error.txHash); link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = ' View transaction ↗'; $('#tradeQuote').append(link); }
+      toast(error?.code === 4001 ? 'Signature declined' : 'Check transaction status');
+    } finally { trade.busy = false; controls.forEach(el => el.disabled = false); paintTrade(); }
   }
 
   function openTrade(tokenAddress) {
@@ -331,6 +355,7 @@
     $('#search').value = '';
     $('#source').value = 'All chains';
     render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
     // Soft cross-slide for the content region on every view change.
     const region = document.querySelector('.content-grid');
     if (region) {
@@ -344,6 +369,7 @@
   /* ---------- Dialogs ---------- */
 
   function open(content) {
+    dialog.querySelector('.dialog-head .eyebrow').textContent = 'TURBOPAD';
     $('#dialogContent').innerHTML = content;
     if (!dialog.open) dialog.showModal();
   }
@@ -738,16 +764,29 @@
     return votes;
   }
 
-  function updateBattlePanel() {
+  async function updateBattlePanel() {
     const pair = battlePair();
     if (!pair) return;
-    const tally = getVotes(pair);
-    const total = tally.counts[pair[0].id] + tally.counts[pair[1].id];
-    const left = Math.round((tally.counts[pair[0].id] / total) * 100);
     const panel = document.querySelector('.battle-panel');
     const cells = panel.querySelectorAll('.fight > div');
     cells[0].innerHTML = `${avatar(pair[0], 'lime-avatar')}<b>$${escapeHtml(pair[0].symbol)}</b>`;
     cells[1].innerHTML = `${avatar(pair[1], 'purple-avatar')}<b>$${escapeHtml(pair[1].symbol)}</b>`;
+
+    try {
+      const res = await fetch(`/api/battles?a=${encodeURIComponent(pair[0].symbol)}&b=${encodeURIComponent(pair[1].symbol)}`);
+      const payload = await res.json();
+      if (payload.success && payload.data) {
+        const { shareA, shareB } = payload.data;
+        $('#battleFill').style.width = `${shareA}%`;
+        $('#battleLeft').textContent = `${shareA}%`;
+        $('#battleRight').textContent = `${shareB}%`;
+        return;
+      }
+    } catch { /* Backend offline, use local fallback */ }
+
+    const tally = getVotes(pair);
+    const total = tally.counts[pair[0].id] + tally.counts[pair[1].id];
+    const left = Math.round((tally.counts[pair[0].id] / total) * 100);
     $('#battleFill').style.width = `${left}%`;
     $('#battleLeft').textContent = `${left}%`;
     $('#battleRight').textContent = `${100 - left}%`;
@@ -757,16 +796,44 @@
     const pair = battlePair();
     if (!pair) { open('<h2>The arena is warming up.</h2><p class="dialog-copy">Live markets are still loading. Try again in a moment.</p>'); return; }
     const tally = getVotes(pair);
-    open(`<h2>Choose your community.</h2><p class="dialog-copy">Live standings from this device's votes. The winning community receives discovery exposure in this concept — not financial rewards.</p><div class="fight"><div>${avatar(pair[0], 'lime-avatar')}<b>$${escapeHtml(pair[0].symbol)}</b><span class="muted">${tally.counts[pair[0].id]} votes</span></div><span>VS</span><div>${avatar(pair[1], 'purple-avatar')}<b>$${escapeHtml(pair[1].symbol)}</b><span class="muted">${tally.counts[pair[1].id]} votes</span></div></div><button class="lime full" data-vote="${escapeHtml(pair[0].id)}">Support $${escapeHtml(pair[0].symbol)}</button><button class="outline full" data-vote="${escapeHtml(pair[1].id)}">Support $${escapeHtml(pair[1].symbol)}</button>`);
+    open(`<span class="eyebrow">MEME BATTLES</span><h2>Choose your community.</h2><p class="dialog-copy">Support your favourite token in this round. Votes are aggregated globally when connected to TurboPad network.</p><div class="fight"><div>${avatar(pair[0], 'lime-avatar')}<b>$${escapeHtml(pair[0].symbol)}</b><span class="muted">${tally.counts[pair[0].id]} votes</span></div><span>VS</span><div>${avatar(pair[1], 'purple-avatar')}<b>$${escapeHtml(pair[1].symbol)}</b><span class="muted">${tally.counts[pair[1].id]} votes</span></div></div><button class="lime full" data-vote="${escapeHtml(pair[0].id)}">Support $${escapeHtml(pair[0].symbol)}</button><button class="outline full" data-vote="${escapeHtml(pair[1].id)}">Support $${escapeHtml(pair[1].symbol)}</button>`);
   }
 
-  function castVote(id) {
+  async function castVote(id) {
     const market = byId(id);
-    if (!market || !votes) return;
+    const pair = battlePair();
+    if (!market || !votes || !pair) return;
+
+    dialog.close();
+
+    // Try posting to backend API
+    try {
+      const res = await fetch('/api/battles/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          a: pair[0].symbol,
+          b: pair[1].symbol,
+          choice: market.symbol,
+          voterId: state.wallet?.address || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.status === 409) {
+        toast(`You have already voted in this round`);
+        updateBattlePanel();
+        return;
+      }
+      if (data.success && data.data) {
+        toast(`Vote recorded for $${market.symbol} globally`);
+        updateBattlePanel();
+        return;
+      }
+    } catch { /* Backend offline, fallback to local persistence */ }
+
     votes.counts[id] = (votes.counts[id] || 0) + 1;
     persist(VOTES_KEY, votes);
     updateBattlePanel();
-    dialog.close();
     toast(`Vote recorded for $${market.symbol} on this device`);
   }
 
@@ -851,7 +918,7 @@
       const switcher = w.provider === 'EVM' && !onRobinhood
         ? '<button class="lime full" id="switchToRobinhood">Switch to Robinhood Chain</button>'
         : '';
-      open(`<h2>Connected wallet</h2><p class="dialog-copy">${escapeHtml(w.provider)} wallet connected read-only. TurboPad never requests signatures or funds.</p><div class="score-list">${lines}</div>${switcher}<button class="outline full" id="disconnectWallet">Disconnect</button>`);
+      open(`<h2>Connected wallet</h2><p class="dialog-copy">${escapeHtml(w.provider)} wallet connected. Connecting does not send a transaction. Swaps and deployments require separate wallet approval.</p><div class="score-list">${lines}</div>${switcher}<button class="outline full" id="disconnectWallet">Disconnect</button>`);
       return;
     }
     try {
@@ -929,10 +996,13 @@
   /* ---------- Launch planner (local drafts, honest outbound) ---------- */
 
   function launch() {
-    open('<h2>Plan your launch.</h2><p class="dialog-copy">Drafts are saved on this device. Ready to go live? Deploy a real ERC-20 straight from your wallet — testnet is free, mainnet is one switch away.</p><form id="launchForm"><label for="tokenName">Token name</label><input id="tokenName" required maxlength="40" placeholder="Turbo Cat"><label for="ticker">Ticker</label><input id="ticker" required maxlength="10" pattern="[A-Za-z0-9]+" placeholder="TCAT"><label for="tokenSupply">Total supply</label><input id="tokenSupply" type="number" min="1" step="1" placeholder="1000000000" value="1000000000"><label for="launchMode">Launch mode</label><select id="launchMode"><option>Fair launch · bonding curve</option><option>Standard · fixed supply</option></select><button class="lime full" type="submit">Save launch draft ↗</button><div class="deploy-row"><button class="outline full" type="button" id="deployTestnet">Deploy · testnet (free)</button><button class="outline full deploy-mainnet" type="button" id="deployMainnet">Deploy · mainnet</button></div><p class="dialog-copy fine-print">Deployment is signed by your wallet. TurboPad never holds keys or funds. Contracts are unaudited — test on testnet first.</p></form>');
+    open(`<div class="launch-heading"><span class="eyebrow">TOKEN DEPLOYMENT</span><h2>Create your token</h2><p class="dialog-copy">Configure a fixed-supply ERC-20 on Robinhood Chain.</p></div><form id="launchForm"><div class="launch-fields"><div><label for="tokenName">Token name</label><input id="tokenName" required maxlength="40" placeholder="e.g. Turbo Cat"></div><div><label for="ticker">Symbol</label><input id="ticker" required maxlength="10" pattern="[A-Za-z0-9]+" placeholder="TCAT"></div></div><label for="tokenSupply">Total supply</label><input id="tokenSupply" type="number" required min="1" step="1" value="1000000000"><div class="launch-summary"><span>Token standard</span><b>ERC-20 · 18 decimals</b><span>Supply model</span><b>Fixed supply</b></div><input id="launchMode" type="hidden" value="Standard · fixed supply"><div class="launch-network"><span class="eyebrow">DEPLOYMENT NETWORK</span><div class="deploy-row"><button class="outline" type="button" id="deployTestnet">Testnet <span>Test deployment</span></button><button class="lime deploy-mainnet" type="button" id="deployMainnet">Mainnet <span>Requires ETH for gas</span></button></div></div><button class="draft-action" type="submit">Save draft for later</button><p class="launch-note">Your wallet reviews and signs the deployment. The full supply is sent to your wallet. Trading requires a liquidity pool.</p></form>`);
   }
 
+  let deploying = false;
   function deployToken(testnet) {
+    if (deploying) { toast('A deployment is already in progress'); return; }
+    if (!$('#launchForm')?.reportValidity()) return;
     if (!state.wallet || state.wallet.provider !== 'EVM') {
       toast('Connect an EVM wallet first to deploy');
       return;
@@ -948,6 +1018,7 @@
       const ok = window.confirm(`You are about to deploy $${ticker.toUpperCase()} on Robinhood Chain MAINNET.\n\nThis spends real ETH on gas and the contract is unaudited. Continue?`);
       if (!ok) return;
     }
+    deploying = true;
     open(`<h2>Deploying $${escapeHtml(ticker.toUpperCase())}…</h2><p class="dialog-copy" id="deployStatus">Preparing…</p>`);
     const status = message => { const el = $('#deployStatus'); if (el) el.textContent = message; };
     TurboDeploy.deploy({ name, symbol: ticker, supply, testnet, onStatus: status })
@@ -955,6 +1026,21 @@
         const deploys = loadJson(DEPLOYS_KEY, []);
         deploys.unshift({ name, ticker: ticker.toUpperCase(), supply, address: result.address, txHash: result.txHash, testnet, created: Date.now() });
         persist(DEPLOYS_KEY, deploys.slice(0, 20));
+        // Register token with backend registry if server is available
+        fetch('/api/tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            address: result.address,
+            name,
+            symbol: ticker.toUpperCase(),
+            supply,
+            txHash: result.txHash,
+            deployer: state.wallet?.address || null,
+            chainId: result.chainId,
+            testnet,
+          }),
+        }).catch(() => { /* offline / static preview fallback */ });
         const net = testnet ? 'testnet' : 'MAINNET';
         open(`<h2>$${escapeHtml(ticker.toUpperCase())} is live on ${net}.</h2><p class="dialog-copy">Your token contract is confirmed on-chain and the full supply is in your wallet.</p><div class="score-list"><div class="score-line"><span>Contract</span><b><a href="${TurboChain.explorerAddress(result.address, testnet)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shortAddress(result.address))} ↗</a></b></div><div class="score-line"><span>Transaction</span><b><a href="${TurboChain.explorerTx(result.txHash, testnet)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shortAddress(result.txHash))} ↗</a></b></div><div class="score-line"><span>Supply</span><b>${escapeHtml(new Intl.NumberFormat('en-US').format(Number(supply)))} $${escapeHtml(ticker.toUpperCase())}</b></div></div><button class="outline full" id="closeTrade">Done</button>`);
         toast(`$${ticker.toUpperCase()} deployed on ${net}`);
@@ -962,8 +1048,9 @@
       .catch(error => {
         const declined = error?.code === 4001;
         open(`<h2>Deployment ${declined ? 'declined' : 'failed'}.</h2><p class="dialog-copy">${escapeHtml(declined ? 'You declined the signature in your wallet — nothing was sent.' : error?.message || 'Unknown error')}</p><button class="outline full" id="closeTrade">Back</button>`);
-        toast(declined ? 'Signature declined' : 'Deployment failed');
-      });
+        if (error?.txHash) { const link = document.createElement('a'); link.href = TurboChain.explorerTx(error.txHash, testnet); link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'View submitted transaction ↗'; $('#dialogContent').append(link); }
+        toast(declined ? 'Signature declined' : 'Check deployment status');
+      }).finally(() => { deploying = false; });
   }
 
   function saveDraft(event) {

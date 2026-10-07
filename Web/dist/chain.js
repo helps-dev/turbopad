@@ -103,6 +103,8 @@
         }],
       });
     }
+    const actual = await provider.request({ method: 'eth_chainId' });
+    if (parseInt(actual, 16) !== target.chainId) throw new Error('Wallet is not on the requested network');
     return target;
   }
 

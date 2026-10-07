@@ -11,8 +11,8 @@
 
   const SEL = {
     quote: '0xc6a5026a',          // quoteExactInputSingle((address,address,uint256,uint24,uint160))
-    exactInputSingle: '0x414bf389', // exactInputSingle((address,address,uint24,address,uint256,uint256,uint256,uint160))
-    multicall: '0xac9650d8',      // multicall(bytes[])
+    exactInputSingle: '0x04e45aaf', // SwapRouter02: exactInputSingle((address,address,uint24,address,uint256,uint256,uint160))
+    multicall: '0x5ae401dc',      // multicall(uint256 deadline,bytes[])
     unwrapWETH9: '0x49404b7c',    // unwrapWETH9(uint256,address)
     approve: '0x095ea7b3',
     allowance: '0xdd62ed3e',
@@ -28,6 +28,8 @@
     const text = String(value).trim();
     if (!/^\d+(\.\d+)?$/.test(text)) throw new Error('Invalid amount');
     const [whole, frac = ''] = text.split('.');
+    if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) throw new Error('Invalid token decimals');
+    if (frac.length > decimals) throw new Error(`Amount exceeds ${decimals} decimal places`);
     const padded = (frac + '0'.repeat(decimals)).slice(0, decimals);
     return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(padded || '0');
   }
@@ -105,11 +107,16 @@
   }
 
   const deadline = () => BigInt(Math.floor(Date.now() / 1000) + 1200);
-  const withSlippage = (amountOut, bps) => (amountOut * BigInt(10000 - bps)) / 10000n;
+  const withSlippage = (amountOut, bps) => {
+    if (!Number.isInteger(bps) || bps < 0 || bps > 300) throw new Error('Slippage must be between 0% and 3%');
+    const minimum = (amountOut * BigInt(10000 - bps)) / 10000n;
+    if (minimum <= 0n) throw new Error('Amount is too small for a protected swap');
+    return minimum;
+  };
 
   function encodeSwap(tokenIn, tokenOut, fee, recipient, amountIn, minOut) {
     return SEL.exactInputSingle + addr(tokenIn) + addr(tokenOut) + u256(fee) + addr(recipient)
-      + u256(deadline()) + u256(amountIn) + u256(minOut) + u256(0);
+      + u256(amountIn) + u256(minOut) + u256(0);
   }
 
   function encodeMulticall(calls) {
@@ -123,11 +130,12 @@
       const bytes = c.slice(2);
       return u256(bytes.length / 2) + bytes.padEnd(Math.ceil(bytes.length / 64) * 64, '0');
     }).join('');
-    return SEL.multicall + u256(0x20) + u256(calls.length) + offsets.map(u256).join('') + body;
+    return SEL.multicall + u256(deadline()) + u256(0x40) + u256(calls.length) + offsets.map(u256).join('') + body;
   }
 
   /** Buy `token` with ETH. @returns {{hash, amountOut, fee}} */
   async function buy({ token, amountWei, slippageBps = 100, onStatus = () => {} }) {
+    await TurboChain.ensureRobinhood();
     const p = provider();
     const from = await account();
     onStatus('Finding the best pool…');
@@ -136,15 +144,16 @@
     onStatus('Confirm the swap in your wallet…');
     const hash = await p.request({
       method: 'eth_sendTransaction',
-      params: [{ from, to: ROUTER, value: `0x${amountWei.toString(16)}`, data: encodeSwap(WETH, token, fee, from, amountWei, minOut) }],
+      params: [{ from, to: ROUTER, value: `0x${amountWei.toString(16)}`, data: encodeMulticall([encodeSwap(WETH, token, fee, from, amountWei, minOut)]) }],
     });
     onStatus('Swap sent — waiting for confirmation…');
-    await waitReceipt(hash);
+    try { await waitReceipt(hash); } catch (error) { error.txHash = hash; throw error; }
     return { hash, amountOut, fee };
   }
 
   /** Sell `token` for ETH (approve once, then swap + unwrap in one tx). */
   async function sell({ token, amountWei, slippageBps = 100, onStatus = () => {} }) {
+    await TurboChain.ensureRobinhood();
     const p = provider();
     const from = await account();
     onStatus('Finding the best pool…');
@@ -154,13 +163,13 @@
     onStatus('Checking token approval…');
     const allowanceHex = await call(token, SEL.allowance + addr(from) + addr(ROUTER));
     if (BigInt(allowanceHex) < amountWei) {
-      onStatus('Approve the token in your wallet (one-time)…');
+      onStatus('Approve this token amount in your wallet…');
       const approveHash = await p.request({
         method: 'eth_sendTransaction',
         params: [{ from, to: token, data: SEL.approve + addr(ROUTER) + u256(amountWei) }],
       });
       onStatus('Approval sent — waiting for confirmation…');
-      await waitReceipt(approveHash);
+      try { await waitReceipt(approveHash); } catch (error) { error.txHash = approveHash; throw error; }
     }
 
     onStatus('Confirm the swap in your wallet…');
@@ -171,7 +180,7 @@
       params: [{ from, to: ROUTER, data: encodeMulticall([swapCall, unwrapCall]) }],
     });
     onStatus('Swap sent — waiting for confirmation…');
-    await waitReceipt(hash);
+    try { await waitReceipt(hash); } catch (error) { error.txHash = hash; throw error; }
     return { hash, amountOut, fee };
   }
 

@@ -5,11 +5,22 @@
   "description": "Interactive visual prototype for TurboPad, a meme and RWA launchpad terminal.",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
-    "start": "node scripts/dev-server.mjs",
-    "check": "node --check Web/dist/featured.js && node --check Web/dist/data.js && node --check Web/dist/chain.js && node --check Web/dist/token-artifact.js && node --check Web/dist/deploy.js && node --check Web/dist/swap.js && node --check Web/dist/app.js && node --check Web/dist/terminal.js && node --check Web/dist/motion.js && node --check Web/dist/launch-motion.js && node --check Web/dist/premium.js",
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "server:dev": "node --watch server/index.js",
+    "check": "node --check Web/dist/featured.js && node --check Web/dist/data.js && node --check Web/dist/chain.js && node --check Web/dist/token-artifact.js && node --check Web/dist/deploy.js && node --check Web/dist/swap.js && node --check Web/dist/app.js && node --check Web/dist/terminal.js && node --check Web/dist/motion.js && node --check Web/dist/launch-motion.js && node --check Web/dist/premium.js && node --check Web/dist/workspace-ui.js",
+    "check:server": "node --check server/index.js && node --check server/db.js && node --check server/services/marketService.js && node --check server/routes/markets.js && node --check server/routes/battles.js && node --check server/routes/tokens.js && node --check server/routes/watchlist.js",
     "compile:token": "node scripts/compile-token.mjs",
     "build:wallet": "esbuild Web/src/walletconnect.entry.js --bundle --minify --format=iife --outfile=Web/dist/walletconnect.js --define:process.env.NODE_ENV='\"production\"'",
-    "deploy:pages": "git push origin $(git subtree split --prefix Web/dist HEAD):gh-pages --force-with-lease"
+    "deploy:pages": "git push origin $(git subtree split --prefix Web/dist HEAD):gh-pages --force-with-lease",
+    "test:transactions": "node tests/transaction-safety.cjs",
+    "test:server": "node tests/server-api.test.cjs",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "deploy:vps": "bash scripts/deploy-vps.sh",
+    "deploy:pm2": "bash scripts/deploy-pm2.sh"
   },
   "engines": {
     "node": ">=18"
@@ -20,5 +31,9 @@
     "esbuild": "^0.28.2",
     "ethers": "^6.17.0",
     "solc": "^0.8.26"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
   }
 }

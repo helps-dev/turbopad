@@ -1,1 +1,21 @@
-{"0": "Prototype Scope", "1": "Application State and Dialogs", "2": "Banner Animation", "3": "Brand Banner", "4": "Market Rendering and Navigation", "5": "Terminal Table and Chart", "6": "Logo Identity", "7": "Market Detail Charts", "8": "Decorative Motion"}
+{
+  "0": "TurboPad UI",
+  "1": "MAINNET_READINESS.md",
+  "2": "index.js",
+  "3": "TurboPad brand banner",
+  "4": "mainnet-readonly.cjs",
+  "5": "marketService.js",
+  "6": "Turbopad logo",
+  "7": "db.js",
+  "8": "ecosystem.config.cjs",
+  "9": "Panduan Deployment TurboPad ke VPS",
+  "10": "compile-token.mjs",
+  "11": "devDependencies",
+  "12": "deploy.sh",
+  "16": "deploy-token.mjs",
+  "17": "package.json",
+  "19": "TurboPad",
+  "24": "scripts",
+  "26": "dev-server.mjs",
+  "30": "AGENTS.md"
+}

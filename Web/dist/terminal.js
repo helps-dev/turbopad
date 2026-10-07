@@ -55,9 +55,10 @@
   function updateSpotlight(markets) {
     const top = markets.find(market => market.kind === 'meme');
     if (!top) { overview.hidden = true; spotlightId = null; return; }
-    overview.hidden = false;
+    overview.hidden = window.TurboPad?.state?.view !== 'Explore';
     const tag = overview.querySelector('.sample-tag');
-    if (tag) tag.textContent = top.featured ? `${window.TurboFeatured?.badge || 'OFFICIAL'} · LIVE DATA` : 'LIVE DATA';
+    if (tag) tag.textContent = top.featured ? `${window.TurboFeatured?.badge || 'FEATURED'} · Market feed` : 'Market feed';
+    overview.querySelector('.insight-note').textContent = 'Calculated from market activity. This score does not measure token safety.';
     const heading = overview.querySelector('.overview-heading');
     heading.querySelector('h2').innerHTML = `${escapeHtml(top.name)} <span>${escapeHtml(top.symbol)}</span>`;
     heading.querySelector('p').innerHTML = `${escapeHtml(top.source)} <span>·</span> ${escapeHtml(top.creator)}`;
@@ -197,7 +198,10 @@
   /* ---------- Sync & layout ---------- */
 
   function sync({ detail }) {
-    const studio = detail.state.view === 'Creator Studio';
+    const studio = detail.state.view === 'Creator Studio' || detail.state.view === 'Trade';
+    document.body.dataset.workspaceView = detail.state.view;
+    document.querySelector('.right-rail').hidden = studio || detail.state.view === 'Watchlist' || detail.state.view === 'RWA Markets' || !detail.state.markets.length;
+    document.querySelector('.stats').hidden = studio || detail.state.view === 'Watchlist' || !detail.state.markets.length;
     displayOptions.hidden = studio;
     table.hidden = studio || detail.state.layout === 'grid';
     cards.hidden = studio || detail.state.layout !== 'grid';
@@ -209,7 +213,7 @@
       ? `Sorted by ${sortLabels[sort.key]} ${sort.dir === 'asc' ? '↑' : '↓'}`
       : 'Ranked by Turbo Score';
     if (detail.state.view === 'Explore' && detail.markets.length) updateSpotlight(detail.markets);
-    else overview.hidden = detail.state.view !== 'Explore';
+    else overview.hidden = true;
     if (detail.markets.length) updateRadar(detail.markets);
   }
 

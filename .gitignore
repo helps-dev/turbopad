@@ -4,6 +4,17 @@
 # Dependencies and build output
 node_modules/
 *.log
+data/
+*.db
+*.db-journal
+
+# Local backups and temporary agent caches
+_backup/
+.codex/
+/*-preview.png
+/trade-redesign.png
+/wallet-test-ready.png
+asset/
 
 # Analysis caches (keep reports, skip caches)
 graphify-out/cache/
